@@ -1,0 +1,342 @@
+---
+name: zoho-task
+description: Work on a Zoho Projects task based on its current status. Accepts URL, ID, or prefix (e.g., CA6-T238).
+---
+
+# Zoho Task Skill
+
+Work on a Zoho Projects task based on its current status.
+
+## Important: Non-Technical Client
+
+The client reviewing Zoho updates is **non-technical**. All comments, updates, and documentation must be:
+
+- **Jargon-free**: No technical terms (avoid "API", "component", "endpoint", "migration", "Vue", "Laravel", "database", "query", etc.)
+- **Plain English**: Write as if explaining to someone unfamiliar with software development
+- **Action-focused**: Describe what users can now DO, not how it was built
+- **Scannable**: Use short sentences, bullet points, and clear headings
+
+### Writing Style Examples
+
+| Technical (Avoid) | Client-Friendly (Use) |
+|-------------------|----------------------|
+| "Added Vue component for CSV export" | "Added a button to download data as a spreadsheet" |
+| "Fixed API endpoint returning 500 error" | "Fixed an issue where the page sometimes failed to load" |
+| "Implemented database migration for new field" | "Added ability to track additional information" |
+| "Refactored authentication middleware" | "Improved the login process" |
+| "Updated TypeScript interfaces" | (Don't mention - internal change) |
+| "PR merged to staging branch" | "Changes are ready for review" |
+
+### What to Include vs Exclude
+
+**Include:**
+- What the user can now see or do
+- Where to find the new feature (with links)
+- Screenshots showing the feature in action
+- Simple steps to verify it works
+
+**Exclude:**
+- Technical implementation details
+- Code changes, file names, or branch names (keep in separate "Code Changes" section for internal reference)
+- Framework or library names
+- Database or architecture changes
+
+## Usage
+
+```
+/zoho-task <task-reference>
+```
+
+The task reference can be:
+
+- **Full URL**: `https://projects.zoho.com/portal/mtcmedialtd#milestone/.../task-detail/1013893000023483027`
+- **Task ID**: `1013893000023483027`
+- **Task prefix/code**: `CA6-T176`
+
+Examples:
+
+```
+/zoho-task CA6-T238
+/zoho-task 1013893000023483027
+/zoho-task https://projects.zoho.com/portal/mtcmedialtd#milestone/1013893000022796035/1013893000022802009/tasklist-detail/1013893000023486013/task-detail/1013893000023483027
+```
+
+## What This Skill Does
+
+This skill fetches the Zoho task and routes to different workflows based on the task status.
+
+### Status: "To do"
+
+The task needs implementation work. The skill will:
+
+1. Read the task description to understand requirements
+2. Read any existing comments for additional context
+3. Explore the codebase to understand the current state
+4. Create a todo list for implementation
+5. Implement the required changes
+6. Run tests to verify the implementation works
+7. Create a feature branch following the naming convention: `feature/CA6-TXXX-description`
+8. Create BitBucket PR (target: staging)
+9. Update Zoho task status to "Open" and add comment with PR link
+
+### Status: "Open" or "In Review"
+
+The task should already be complete. The skill will:
+
+1. Read the task description to understand what was implemented
+2. Read existing comments for context on what was done
+3. Write an E2E Playwright test to prove the feature works
+4. Capture screenshots during the test (1440x900 viewport)
+5. Upload screenshots to the Zoho task as attachments
+6. Construct a Zoho comment with:
+   - Summary of what was implemented (client-friendly language)
+   - Inline embedded screenshots as evidence
+   - Live production URLs where applicable
+   - Steps the client can take to verify the feature
+
+## Instructions
+
+When this skill is invoked:
+
+### Step 1: Parse the Task Reference
+
+Extract the task identifier from the argument:
+
+- **URL format**: Extract the task ID from the URL (the number after `task-detail/`)
+- **Task ID format**: Use the numeric ID directly (16+ digits)
+- **Prefix format**: Use `get_task_by_prefix` to find the task (e.g., `CA6-T176`)
+
+### Step 2: Fetch the Task
+
+Use the Zoho Projects MCP tools. **Always include the project_id** for faster, more reliable lookups:
+
+```
+# For prefix (e.g., CA6-T176) - ALWAYS include project_id
+mcp__zoho-projects__get_task_by_prefix(prefix: "CA6-T176", project_id: "1013893000022796035")
+
+# For task ID
+mcp__zoho-projects__get_task(project_id: "1013893000022796035", task_id: "<task_id>")
+```
+
+**Note:** The default project ID is `1013893000022796035` (CAHER project). Always use this when searching by prefix.
+
+Also fetch task comments for additional context:
+
+```
+mcp__zoho-projects__list_task_comments(project_id: "1013893000022796035", task_id: "<task_id>")
+```
+
+### Step 3: Route Based on Status
+
+Check the task's `status.name` field and route accordingly:
+
+#### If status is "To do":
+
+1. **Understand the task**: Read the description and comments carefully
+2. **Explore the codebase**: Use the Task tool with `subagent_type=Explore` to understand:
+   - Relevant existing code and patterns
+   - Where changes need to be made
+   - How similar features were implemented
+3. **Plan the implementation**: Create a todo list with specific steps
+4. **Create branch**: If not already on a feature branch, create one:
+   ```
+   git checkout -b feature/CA6-TXXX-short-description
+   ```
+5. **Implement**: Make the necessary code changes
+6. **Test**: Run relevant tests to verify the implementation
+7. **Commit and push**:
+    ```bash
+    git add -A
+    git commit -m "feat(scope): description"
+    git push -u origin feature/CA6-TXXX-short-description
+    ```
+
+8. **Create BitBucket PR** (target: `staging`):
+    ```
+    mcp__bitbucket__bb_post(
+        path: "/repositories/mtcmedia/caher-staff-dashboard/pullrequests",
+        body: {
+            "title": "CA6-TXXX: Brief description",
+            "source": {"branch": {"name": "feature/CA6-TXXX-short-description"}},
+            "destination": {"branch": {"name": "staging"}},
+            "description": "## Summary\n- Change description\n\n## Zoho Task\nCA6-TXXX"
+        }
+    )
+    ```
+    Capture the PR number and URL from the response.
+
+9. **Update Zoho task status to "Open"**:
+    The "Open" status ID is `1013893000001076068`. Update the task:
+    ```
+    mcp__zoho-projects__update_task(
+        project_id: "1013893000022796035",
+        task_id: "<task_id>",
+        status_id: "1013893000001076068"
+    )
+    ```
+
+10. **Add Zoho comment** with PR reference and feature summary:
+    Always include a clear summary of what features the PR introduces, written in client-friendly language.
+    ```
+    mcp__zoho-projects__add_task_comment(
+        project_id: "1013893000022796035",
+        task_id: "<task_id>",
+        content: "Code ready for internal review:<ul><li>Branch: <code>feature/CA6-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/mtcmedia/caher-staff-dashboard/pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li><li>Any other key changes</li></ul>"
+    )
+    ```
+
+    **Important**: The feature summary should:
+    - Describe what users can now DO, not technical implementation details
+    - Use client-friendly language (no jargon)
+    - List all key features/changes introduced by the PR
+    - Help reviewers understand the PR's purpose at a glance
+
+#### If status is "Open" or "In Review":
+
+1. **Understand what was done**: Read the description and comments
+2. **Create screenshot test**: Write a Playwright E2E test that:
+   - Navigates to the relevant page(s)
+   - Captures screenshots at key steps
+   - Uses 1440x900 viewport for clear images
+   - Saves to `screenshots/<feature-name>/` with numbered filenames
+
+   Example test structure:
+   ```typescript
+   import { test } from '@playwright/test'
+   import fs from 'fs'
+   import path from 'path'
+
+   const screenshotDir = path.join(__dirname, '../../screenshots/<feature-name>')
+
+   test.describe('Feature Name - Screenshots', () => {
+       test.use({ viewport: { width: 1440, height: 900 } })
+
+       test.beforeAll(async () => {
+           if (!fs.existsSync(screenshotDir)) {
+               fs.mkdirSync(screenshotDir, { recursive: true })
+           }
+       })
+
+       test('capture feature screenshots', async ({ page }) => {
+           await page.goto('/staff/...')
+           await page.screenshot({
+               path: path.join(screenshotDir, '01-step-name.png'),
+               fullPage: false
+           })
+           // Additional steps...
+       })
+   })
+   ```
+
+3. **Run the test**: Execute the screenshot test
+   ```bash
+   CI=1 PLAYWRIGHT_BASE_URL=http://localhost:${APP_PORT} npx playwright test <test-file> --project=chromium
+   ```
+
+4. **Upload screenshots**: Use the Zoho MCP tool to upload each screenshot
+   ```
+   mcp__zoho-projects__upload_task_attachment(
+       project_id: "1013893000022796035",
+       task_id: "<task_id>",
+       file_path: "/absolute/path/to/screenshot.png"
+   )
+   ```
+   Save the `third_party_file_id` and `x-cli-msg` from each response.
+
+5. **Construct the Zoho screenshot comment**: Create an HTML comment following CLAUDE.md guidelines:
+   - **Start with marker**: Begin with `[SCREENSHOTS]` so the comment is identifiable for later editing
+   - Client-friendly language (no technical jargon)
+   - Use HTML formatting (`<ul>`, `<li>`, `<b>` tags)
+   - Embed screenshots inline using the `/image/` endpoint:
+     ```
+     https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}
+     ```
+   - Include production URLs where applicable (base: `https://hercitizenadvice.mtcserver26.com`)
+   - Keep the entire comment on ONE line (no line breaks except explicit `<br>`)
+   - Include "How to verify" steps
+
+   Example format:
+   ```html
+   [SCREENSHOTS] Feature evidence and verification:<ul><li>Feature description in plain language</li></ul><b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify:</b><ul><li>Visit <a href="https://hercitizenadvice.mtcserver26.com/staff/page">the page</a></li><li>Observe the feature working</li></ul>
+   ```
+
+6. **Post the screenshot comment**: Add the comment to the task
+   ```
+   mcp__zoho-projects__add_task_comment(
+       project_id: "1013893000022796035",
+       task_id: "<task_id>",
+       content: "<html-comment>"
+   )
+   ```
+
+   **Note**: The `[SCREENSHOTS]` marker makes this comment identifiable. To update screenshots later, find this comment using `list_task_comments` and use `edit_task_comment` with the comment ID.
+
+### Step 4: Multiple PRs (When Applicable)
+
+Create separate PRs when:
+- **Feature + Evidence**: Main feature work merged earlier, now adding screenshot tests as evidence
+- **Incremental delivery**: Large task broken into reviewable chunks
+- **Fixes during review**: Additional changes needed after initial review
+
+Reference all relevant PRs in the Zoho comment's internal section.
+
+## Zoho Comment Templates
+
+### For Client Review (Primary Section)
+
+Write in plain English, focusing on what the user can now do:
+
+```html
+This feature is now complete and ready for your review.<ul><li>You can now [describe what they can do]</li><li>[Another user-facing benefit]</li></ul><b>Where to find it:</b><br>Visit <a href="https://hercitizenadvice.mtcserver26.com/staff/page">the page name</a> to see this in action.<b>Screenshots:</b><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify this is working:</b><ul><li>Go to [page name]</li><li>You should see [expected result]</li><li>Try [action] and confirm [outcome]</li></ul>
+```
+
+### Internal Reference Section (Optional)
+
+If you need to include technical references for internal team members, add a clearly separated section:
+
+```html
+<hr><b>Internal Reference (for development team):</b><ul><li>Branch: <code>feature/CA6-TXXX-description</code></li><li>Pull Request: <a href="https://bitbucket.org/mtcmedia/caher-staff-dashboard/pull-requests/XX">PR #XX</a></li></ul>
+```
+
+### Complete Example
+
+```html
+This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="https://hercitizenadvice.mtcserver26.com/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ul><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ul><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/CA6-T252-csv-export</code></li><li>PR: <a href="https://bitbucket.org/mtcmedia/caher-staff-dashboard/pull-requests/45">PR #45</a></li></ul>
+```
+
+## Final Checklist
+
+### For "To do" Tasks (Implementation)
+
+Before completing the PR workflow:
+
+- [ ] **Implementation complete**: All required functionality is working
+- [ ] **Tests pass**: Unit/feature tests verify the implementation
+- [ ] **PR created**: BitBucket PR targeting staging branch
+- [ ] **Status updated**: Task status changed to "Open" (ID: `1013893000001076068`)
+- [ ] **Zoho comment added**: PR link included for internal reference
+
+### For "Open"/"In Review" Tasks (Documentation)
+
+Before posting the Zoho screenshot comment, verify:
+
+- [ ] **Marker included**: Comment starts with `[SCREENSHOTS]` for later identification
+- [ ] **Language check**: No technical jargon - would a non-developer understand this?
+- [ ] **Action-focused**: Describes what users can DO, not how it was built
+- [ ] **Screenshots**: All images uploaded and embedded inline (using `/image/` not `/thumbnail/`)
+- [ ] **Links**: Production URLs included for relevant pages
+- [ ] **Verification steps**: Clear, actionable steps the client can follow
+- [ ] **Single line**: Entire comment on ONE line (no unintended line breaks)
+- [ ] **PR reference**: Included in internal section (if applicable)
+
+## Important Notes
+
+- **Project ID**: Always use `1013893000022796035` (from CLAUDE.md)
+- **Open Status ID**: Use `1013893000001076068` to set task status to "Open"
+- **Production URL**: `https://hercitizenadvice.mtcserver26.com`
+- **BitBucket Repo**: `mtcmedia/caher-staff-dashboard` (workspace/repo-slug)
+- **Screenshots are gitignored**: Don't commit screenshot images to the repo (only the test files)
+- **Single-line comments**: Zoho converts newlines to `<br>` tags - keep entire comment on one line
+- **No emojis**: Don't use checkmarks (✅) or other emojis in Zoho comments
+- **No dates**: Don't include "Status Update - January 2026" headers
+- **Screenshot hosting**: Upload to Zoho first to get URLs, then embed in BitBucket PR description
