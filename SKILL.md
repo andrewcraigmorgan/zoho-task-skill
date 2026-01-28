@@ -98,6 +98,42 @@ The task should already be complete. The skill will:
 
 When this skill is invoked:
 
+### Step 0: Check Configuration
+
+Before proceeding, check if the required configuration exists in the project's CLAUDE.md file. Look for these values:
+
+- **Project ID** (Zoho)
+- **Open Status ID** (Zoho)
+- **Workspace** (BitBucket)
+- **Repository** (BitBucket)
+- **Production URL**
+
+**If any configuration is missing**, use the AskUserQuestion tool to prompt for the missing values:
+
+```
+AskUserQuestion:
+  question: "I need some configuration to work with Zoho tasks. What is your Zoho Project ID?"
+  header: "Project ID"
+  options:
+    - label: "I'll provide it"
+      description: "Enter your Zoho Project ID (found in the URL when viewing your project)"
+```
+
+Prompt for each missing value, then offer to save them to `.claude/CLAUDE.md`:
+
+```
+AskUserQuestion:
+  question: "Would you like me to save this configuration to .claude/CLAUDE.md for future use?"
+  header: "Save config"
+  options:
+    - label: "Yes, save it"
+      description: "Add configuration to .claude/CLAUDE.md so you don't have to enter it again"
+    - label: "No, just use it this time"
+      description: "Use these values for this session only"
+```
+
+If the user chooses to save, create or update `.claude/CLAUDE.md` with the configuration block.
+
 ### Step 1: Parse the Task Reference
 
 Extract the task identifier from the argument:
@@ -112,18 +148,18 @@ Use the Zoho Projects MCP tools. **Always include the project_id** for faster, m
 
 ```
 # For prefix (e.g., CA6-T176) - ALWAYS include project_id
-mcp__zoho-projects__get_task_by_prefix(prefix: "CA6-T176", project_id: "1013893000022796035")
+mcp__zoho-projects__get_task_by_prefix(prefix: "CA6-T176", project_id: "<PROJECT_ID>")
 
 # For task ID
-mcp__zoho-projects__get_task(project_id: "1013893000022796035", task_id: "<task_id>")
+mcp__zoho-projects__get_task(project_id: "<PROJECT_ID>", task_id: "<task_id>")
 ```
 
-**Note:** The default project ID is `1013893000022796035` (CAHER project). Always use this when searching by prefix.
+**Note:** The project ID should be configured in your project's CLAUDE.md file.
 
 Also fetch task comments for additional context:
 
 ```
-mcp__zoho-projects__list_task_comments(project_id: "1013893000022796035", task_id: "<task_id>")
+mcp__zoho-projects__list_task_comments(project_id: "<PROJECT_ID>", task_id: "<task_id>")
 ```
 
 ### Step 3: Route Based on Status
@@ -154,24 +190,24 @@ Check the task's `status.name` field and route accordingly:
 8. **Create BitBucket PR** (target: `staging`):
     ```
     mcp__bitbucket__bb_post(
-        path: "/repositories/mtcmedia/caher-staff-dashboard/pullrequests",
+        path: "/repositories/<WORKSPACE>/<REPO_SLUG>/pullrequests",
         body: {
-            "title": "CA6-TXXX: Brief description",
-            "source": {"branch": {"name": "feature/CA6-TXXX-short-description"}},
+            "title": "<TASK_PREFIX>: Brief description",
+            "source": {"branch": {"name": "feature/<TASK_PREFIX>-short-description"}},
             "destination": {"branch": {"name": "staging"}},
-            "description": "## Summary\n- Change description\n\n## Zoho Task\nCA6-TXXX"
+            "description": "## Summary\n- Change description\n\n## Zoho Task\n<TASK_PREFIX>"
         }
     )
     ```
     Capture the PR number and URL from the response.
 
 9. **Update Zoho task status to "Open"**:
-    The "Open" status ID is `1013893000001076068`. Update the task:
+    The "Open" status ID should be configured in CLAUDE.md. Update the task:
     ```
     mcp__zoho-projects__update_task(
-        project_id: "1013893000022796035",
+        project_id: "<PROJECT_ID>",
         task_id: "<task_id>",
-        status_id: "1013893000001076068"
+        status_id: "<OPEN_STATUS_ID>"
     )
     ```
 
@@ -179,9 +215,9 @@ Check the task's `status.name` field and route accordingly:
     Always include a clear summary of what features the PR introduces, written in client-friendly language.
     ```
     mcp__zoho-projects__add_task_comment(
-        project_id: "1013893000022796035",
+        project_id: "<PROJECT_ID>",
         task_id: "<task_id>",
-        content: "Code ready for internal review:<ul><li>Branch: <code>feature/CA6-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/mtcmedia/caher-staff-dashboard/pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li><li>Any other key changes</li></ul>"
+        content: "Code ready for internal review:<ul><li>Branch: <code>feature/<TASK_PREFIX>-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/<WORKSPACE>/<REPO_SLUG>/pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li><li>Any other key changes</li></ul>"
     )
     ```
 
@@ -236,7 +272,7 @@ Check the task's `status.name` field and route accordingly:
 4. **Upload screenshots**: Use the Zoho MCP tool to upload each screenshot
    ```
    mcp__zoho-projects__upload_task_attachment(
-       project_id: "1013893000022796035",
+       project_id: "<PROJECT_ID>",
        task_id: "<task_id>",
        file_path: "/absolute/path/to/screenshot.png"
    )
@@ -251,19 +287,19 @@ Check the task's `status.name` field and route accordingly:
      ```
      https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}
      ```
-   - Include production URLs where applicable (base: `https://hercitizenadvice.mtcserver26.com`)
+   - Include production URLs where applicable (use `<PRODUCTION_URL>` from CLAUDE.md)
    - Keep the entire comment on ONE line (no line breaks except explicit `<br>`)
    - Include "How to verify" steps
 
    Example format:
    ```html
-   [SCREENSHOTS] Feature evidence and verification:<ul><li>Feature description in plain language</li></ul><b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify:</b><ul><li>Visit <a href="https://hercitizenadvice.mtcserver26.com/staff/page">the page</a></li><li>Observe the feature working</li></ul>
+   [SCREENSHOTS] Feature evidence and verification:<ul><li>Feature description in plain language</li></ul><b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify:</b><ul><li>Visit <a href="<PRODUCTION_URL>/staff/page">the page</a></li><li>Observe the feature working</li></ul>
    ```
 
 6. **Post the screenshot comment**: Add the comment to the task
    ```
    mcp__zoho-projects__add_task_comment(
-       project_id: "1013893000022796035",
+       project_id: "<PROJECT_ID>",
        task_id: "<task_id>",
        content: "<html-comment>"
    )
@@ -287,7 +323,7 @@ Reference all relevant PRs in the Zoho comment's internal section.
 Write in plain English, focusing on what the user can now do:
 
 ```html
-This feature is now complete and ready for your review.<ul><li>You can now [describe what they can do]</li><li>[Another user-facing benefit]</li></ul><b>Where to find it:</b><br>Visit <a href="https://hercitizenadvice.mtcserver26.com/staff/page">the page name</a> to see this in action.<b>Screenshots:</b><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify this is working:</b><ul><li>Go to [page name]</li><li>You should see [expected result]</li><li>Try [action] and confirm [outcome]</li></ul>
+This feature is now complete and ready for your review.<ul><li>You can now [describe what they can do]</li><li>[Another user-facing benefit]</li></ul><b>Where to find it:</b><br>Visit <a href="<PRODUCTION_URL>/staff/page">the page name</a> to see this in action.<b>Screenshots:</b><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify this is working:</b><ul><li>Go to [page name]</li><li>You should see [expected result]</li><li>Try [action] and confirm [outcome]</li></ul>
 ```
 
 ### Internal Reference Section (Optional)
@@ -295,13 +331,13 @@ This feature is now complete and ready for your review.<ul><li>You can now [desc
 If you need to include technical references for internal team members, add a clearly separated section:
 
 ```html
-<hr><b>Internal Reference (for development team):</b><ul><li>Branch: <code>feature/CA6-TXXX-description</code></li><li>Pull Request: <a href="https://bitbucket.org/mtcmedia/caher-staff-dashboard/pull-requests/XX">PR #XX</a></li></ul>
+<hr><b>Internal Reference (for development team):</b><ul><li>Branch: <code>feature/<TASK_PREFIX>-description</code></li><li>Pull Request: <a href="https://bitbucket.org/<WORKSPACE>/<REPO_SLUG>/pull-requests/XX">PR #XX</a></li></ul>
 ```
 
 ### Complete Example
 
 ```html
-This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="https://hercitizenadvice.mtcserver26.com/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ul><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ul><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/CA6-T252-csv-export</code></li><li>PR: <a href="https://bitbucket.org/mtcmedia/caher-staff-dashboard/pull-requests/45">PR #45</a></li></ul>
+This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="<PRODUCTION_URL>/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ul><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ul><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/<TASK_PREFIX>-csv-export</code></li><li>PR: <a href="https://bitbucket.org/<WORKSPACE>/<REPO_SLUG>/pull-requests/45">PR #45</a></li></ul>
 ```
 
 ## Final Checklist
@@ -313,7 +349,7 @@ Before completing the PR workflow:
 - [ ] **Implementation complete**: All required functionality is working
 - [ ] **Tests pass**: Unit/feature tests verify the implementation
 - [ ] **PR created**: BitBucket PR targeting staging branch
-- [ ] **Status updated**: Task status changed to "Open" (ID: `1013893000001076068`)
+- [ ] **Status updated**: Task status changed to "Open"
 - [ ] **Zoho comment added**: PR link included for internal reference
 
 ### For "Open"/"In Review" Tasks (Documentation)
@@ -331,14 +367,32 @@ Before posting the Zoho screenshot comment, verify:
 
 ## Important Notes
 
-- **Project ID**: Always use `1013893000022796035` (from CLAUDE.md)
-- **Open Status ID**: Use `1013893000001076068` to set task status to "Open"
-- **Production URL**: `https://hercitizenadvice.mtcserver26.com`
-- **BitBucket Repo**: `mtcmedia/caher-staff-dashboard` (workspace/repo-slug)
 - **Screenshots are gitignored**: Don't commit screenshot images to the repo (only the test files)
 - **Single-line comments**: Zoho converts newlines to `<br>` tags - keep entire comment on one line
 - **No emojis**: Don't use checkmarks (✅) or other emojis in Zoho comments
 - **No dates**: Don't include "Status Update - January 2026" headers
-- **Screenshot hosting**: Upload to Zoho first to get URLs, then embed in BitBucket PR description
+- **Screenshot hosting in PRs**: Embed screenshots directly in BitBucket PR descriptions (BitBucket hosts them) - Zoho images are behind a login and won't display
 - **Don't say "ready for review/testing"**: Only say this once changes are actually deployed and testable - code being in a PR doesn't mean it's ready for client review
 - **Edit, don't add corrections**: If a comment needs correcting, use `edit_task_comment` to fix the original rather than adding follow-up comments
+
+## Required Configuration
+
+Add these values to your project's CLAUDE.md file:
+
+```markdown
+# Zoho Projects Configuration
+- **Project ID**: `<your-project-id>`
+- **Open Status ID**: `<your-open-status-id>`
+
+# BitBucket Configuration
+- **Workspace**: `<your-workspace>`
+- **Repository**: `<your-repo-slug>`
+
+# URLs
+- **Production URL**: `<your-production-url>`
+```
+
+To find your status IDs, use:
+```
+mcp__zoho-projects__list_statuses(project_id: "<PROJECT_ID>")
+```

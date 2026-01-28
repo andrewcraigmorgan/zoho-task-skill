@@ -47,15 +47,43 @@ This skill fetches a Zoho Projects task and routes to different workflows based 
 
 ## Requirements
 
-- [Zoho Projects MCP Server](https://github.com/example/zoho-projects-mcp) configured
-- [Bitbucket MCP Server](https://github.com/example/bitbucket-mcp) configured (for PR creation)
+- [Zoho Projects MCP Server](https://github.com/andrewcraigmorgan/zoho-projects-mcp) configured
+- [Bitbucket MCP Server](https://github.com/aashari/mcp-server-atlassian-bitbucket) configured (for PR creation)
 
 ## Configuration
 
-The skill contains project-specific IDs that you'll need to update for your own Zoho Projects setup:
-- Project ID
-- Status IDs
-- BitBucket repository details
+Each project using this skill needs configuration in its `.claude/CLAUDE.md` file. This tells the skill which Zoho project, BitBucket repo, and production URL to use.
+
+**First-time setup**: If configuration is missing, the skill will prompt you for each value and offer to save them to `.claude/CLAUDE.md` automatically.
+
+### Manual Setup
+
+1. Create `.claude/CLAUDE.md` in your project root (if it doesn't exist)
+2. Add the following configuration:
+
+```markdown
+# Zoho Projects Configuration
+- **Project ID**: `1013893000022796035`
+- **Open Status ID**: `1013893000001076068`
+
+# BitBucket Configuration
+- **Workspace**: `myworkspace`
+- **Repository**: `my-repo-slug`
+
+# URLs
+- **Production URL**: `https://myapp.example.com`
+```
+
+### Finding Your IDs
+
+**Zoho Project ID**: Found in the URL when viewing your project in Zoho Projects.
+
+**Zoho Status IDs**: Ask Claude to run:
+```
+mcp__zoho-projects__list_statuses(project_id: "<PROJECT_ID>")
+```
+
+**BitBucket Workspace/Repo**: Found in your repository URL: `bitbucket.org/<workspace>/<repo-slug>`
 
 ## License
 
