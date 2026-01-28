@@ -340,3 +340,5 @@ Before posting the Zoho screenshot comment, verify:
 - **No emojis**: Don't use checkmarks (✅) or other emojis in Zoho comments
 - **No dates**: Don't include "Status Update - January 2026" headers
 - **Screenshot hosting**: Upload to Zoho first to get URLs, then embed in BitBucket PR description
+- **Don't say "ready for review/testing"**: Only say this once changes are actually deployed and testable - code being in a PR doesn't mean it's ready for client review
+- **Edit, don't add corrections**: If a comment needs correcting, use `edit_task_comment` to fix the original rather than adding follow-up comments
