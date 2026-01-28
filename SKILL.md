@@ -94,6 +94,30 @@ The task should already be complete. The skill will:
    - Live production URLs where applicable
    - Steps the client can take to verify the feature
 
+## Preview Before Updating Zoho
+
+**Always preview changes before making any Zoho API call.** Before updating task status, adding comments, or editing comments, show the user exactly what will be sent and ask for confirmation.
+
+Use the AskUserQuestion tool to present the preview:
+
+```
+AskUserQuestion:
+  question: "Ready to update Zoho. Does this look correct?"
+  header: "Confirm"
+  options:
+    - label: "Yes, update Zoho"
+      description: "Proceed with the update as shown"
+    - label: "No, let me edit"
+      description: "I'll provide changes before updating"
+```
+
+**What to preview:**
+- **Status changes**: Show the current status → new status
+- **New comments**: Show the full comment content (formatted for readability)
+- **Comment edits**: Show the original comment and the updated version
+
+This gives the user a chance to catch issues before they're posted to the client-visible task.
+
 ## Instructions
 
 When this skill is invoked:
@@ -202,7 +226,9 @@ Check the task's `status.name` field and route accordingly:
     Capture the PR number and URL from the response.
 
 9. **Update Zoho task status to "Open"**:
-    The "Open" status ID should be configured in CLAUDE.md. Update the task:
+    The "Open" status ID should be configured in CLAUDE.md.
+
+    **Preview first**: Show the user the status change (e.g., "To do" → "Open") and get confirmation before updating:
     ```
     mcp__zoho-projects__update_task(
         project_id: "<PROJECT_ID>",
@@ -213,6 +239,8 @@ Check the task's `status.name` field and route accordingly:
 
 10. **Add Zoho comment** with PR reference and feature summary:
     Always include a clear summary of what features the PR introduces, written in client-friendly language.
+
+    **Preview first**: Show the user the full comment content (formatted for readability) and get confirmation before posting.
     ```
     mcp__zoho-projects__add_task_comment(
         project_id: "<PROJECT_ID>",
@@ -297,6 +325,8 @@ Check the task's `status.name` field and route accordingly:
    ```
 
 6. **Post the screenshot comment**: Add the comment to the task
+
+   **Preview first**: Show the user the full comment content (formatted for readability, with embedded image previews if possible) and get confirmation before posting.
    ```
    mcp__zoho-projects__add_task_comment(
        project_id: "<PROJECT_ID>",
@@ -367,6 +397,7 @@ Before posting the Zoho screenshot comment, verify:
 
 ## Important Notes
 
+- **Preview before updating Zoho**: Always show the user what you're about to change before making any Zoho API calls (status updates, comments, edits). This gives them a chance to review and approve the changes.
 - **Screenshots are gitignored**: Don't commit screenshot images to the repo (only the test files)
 - **Single-line comments**: Zoho converts newlines to `<br>` tags - keep entire comment on one line
 - **No emojis**: Don't use checkmarks (✅) or other emojis in Zoho comments
