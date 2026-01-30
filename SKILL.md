@@ -39,6 +39,16 @@ Before ANY Zoho comment action, you MUST complete this checklist:
 ✗ User says anything ambiguous (CLARIFY FIRST)
 ✗ Silence or moving to next topic (DO NOT ASSUME APPROVAL)
 
+### Content Validation
+
+Before posting any comment, validate the content:
+
+1. **Non-empty**: Never post empty or whitespace-only comments. If the content is blank, stop and ask the user what should be included.
+2. **Minimum length**: Comments must be at least 10 characters of meaningful content. Short or placeholder text (e.g., "update", "done") is not acceptable for client-facing communication.
+3. **No placeholders**: Ensure all template placeholders (e.g., `{STAGING_URL}`, `{file_id}`) have been replaced with actual values before posting.
+
+If any validation fails, show the user what's wrong and ask them to provide or confirm the content before proceeding.
+
 ### Consequences of Violation
 
 Posting without approval wastes client-facing communication and erodes trust. If you violate this rule, immediately acknowledge the mistake and ask the user what corrective action to take.
