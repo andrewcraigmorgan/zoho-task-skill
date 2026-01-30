@@ -7,6 +7,44 @@ description: Work on a Zoho Projects task based on its current status. Accepts U
 
 Work on a Zoho Projects task based on its current status.
 
+## CRITICAL: Zoho Comment Approval Gate
+
+**NEVER call `add_task_comment` or `edit_task_comment` without EXPLICIT user approval.**
+
+### Mandatory Approval Process
+
+Before ANY Zoho comment action, you MUST complete this checklist:
+
+1. **Show a FORMATTED preview** of the comment using markdown (not raw HTML) so the user can read it easily. Use markdown bullet points, bold, numbered lists, and links to represent the HTML structure. Wrap the preview in a horizontal rule block (`---`) to visually separate it.
+
+2. **Ask explicitly**: "Should I post this comment to Zoho? (yes/no)"
+
+3. **STOP and WAIT** for the user to respond with explicit approval (e.g., "yes", "post it", "approved")
+
+4. **If the user says anything OTHER than clear approval** (e.g., asks a question, points out an issue, says "there's no content"), do NOT post. Clarify first.
+
+### What Counts as Approval
+
+✓ "yes"
+✓ "post it"
+✓ "approved"
+✓ "go ahead"
+✓ "looks good, post it"
+
+### What Does NOT Count as Approval
+
+✗ No response yet (WAIT)
+✗ User asks a question (ANSWER FIRST)
+✗ User points out an issue (FIX FIRST)
+✗ User says anything ambiguous (CLARIFY FIRST)
+✗ Silence or moving to next topic (DO NOT ASSUME APPROVAL)
+
+### Consequences of Violation
+
+Posting without approval wastes client-facing communication and erodes trust. If you violate this rule, immediately acknowledge the mistake and ask the user what corrective action to take.
+
+This applies to ALL Zoho comments - PR updates, screenshot comments, status updates, etc.
+
 ## Important: Non-Technical Client
 
 The client reviewing Zoho updates is **non-technical**. All comments, updates, and documentation must be:
@@ -40,6 +78,20 @@ The client reviewing Zoho updates is **non-technical**. All comments, updates, a
 - Code changes, file names, or branch names (keep in separate "Code Changes" section for internal reference)
 - Framework or library names
 - Database or architecture changes
+
+## Preview/Staging Environment
+
+**All Zoho comments MUST include verification steps using the staging environment.**
+
+The staging and production URLs are defined in the **project's CLAUDE.md** under "Environment URLs". Look for:
+- **Staging URL** - For testing PRs before production (use in verification steps)
+- **Production URL** - Live environment (only reference after deployment)
+
+When writing verification steps:
+- Always use the **staging URL** for tasks in "To do" → "Open" workflow (PR merged to staging)
+- Use the **production URL** only for tasks in "Open"/"In Review" that have been deployed to production
+- Provide specific page paths (e.g., `/staff/settings`, `/staff/manage-team`)
+- Include login instructions if relevant (e.g., "Log in as a superuser")
 
 ## Usage
 
@@ -94,69 +146,9 @@ The task should already be complete. The skill will:
    - Live production URLs where applicable
    - Steps the client can take to verify the feature
 
-## Preview Before Updating Zoho
-
-**Always preview changes before making any Zoho API call.** Before updating task status, adding comments, or editing comments, show the user exactly what will be sent and ask for confirmation.
-
-Use the AskUserQuestion tool to present the preview:
-
-```
-AskUserQuestion:
-  question: "Ready to update Zoho. Does this look correct?"
-  header: "Confirm"
-  options:
-    - label: "Yes, update Zoho"
-      description: "Proceed with the update as shown"
-    - label: "No, let me edit"
-      description: "I'll provide changes before updating"
-```
-
-**What to preview:**
-- **Status changes**: Show the current status → new status
-- **New comments**: Show the full comment content (formatted for readability)
-- **Comment edits**: Show the original comment and the updated version
-
-This gives the user a chance to catch issues before they're posted to the client-visible task.
-
 ## Instructions
 
 When this skill is invoked:
-
-### Step 0: Check Configuration
-
-Before proceeding, check if the required configuration exists in the project's CLAUDE.md file. Look for these values:
-
-- **Project ID** (Zoho)
-- **Open Status ID** (Zoho)
-- **Workspace** (BitBucket)
-- **Repository** (BitBucket)
-- **Production URL**
-
-**If any configuration is missing**, use the AskUserQuestion tool to prompt for the missing values:
-
-```
-AskUserQuestion:
-  question: "I need some configuration to work with Zoho tasks. What is your Zoho Project ID?"
-  header: "Project ID"
-  options:
-    - label: "I'll provide it"
-      description: "Enter your Zoho Project ID (found in the URL when viewing your project)"
-```
-
-Prompt for each missing value, then offer to save them to `.claude/CLAUDE.md`:
-
-```
-AskUserQuestion:
-  question: "Would you like me to save this configuration to .claude/CLAUDE.md for future use?"
-  header: "Save config"
-  options:
-    - label: "Yes, save it"
-      description: "Add configuration to .claude/CLAUDE.md so you don't have to enter it again"
-    - label: "No, just use it this time"
-      description: "Use these values for this session only"
-```
-
-If the user chooses to save, create or update `.claude/CLAUDE.md` with the configuration block.
 
 ### Step 1: Parse the Task Reference
 
@@ -172,18 +164,18 @@ Use the Zoho Projects MCP tools. **Always include the project_id** for faster, m
 
 ```
 # For prefix (e.g., CA6-T176) - ALWAYS include project_id
-mcp__zoho-projects__get_task_by_prefix(prefix: "CA6-T176", project_id: "<PROJECT_ID>")
+mcp__zoho-projects__get_task_by_prefix(prefix: "CA6-T176", project_id: "1013893000022796035")
 
 # For task ID
-mcp__zoho-projects__get_task(project_id: "<PROJECT_ID>", task_id: "<task_id>")
+mcp__zoho-projects__get_task(project_id: "1013893000022796035", task_id: "<task_id>")
 ```
 
-**Note:** The project ID should be configured in your project's CLAUDE.md file.
+**Note:** The default project ID is `1013893000022796035` (CAHER project). Always use this when searching by prefix.
 
 Also fetch task comments for additional context:
 
 ```
-mcp__zoho-projects__list_task_comments(project_id: "<PROJECT_ID>", task_id: "<task_id>")
+mcp__zoho-projects__list_task_comments(project_id: "1013893000022796035", task_id: "<task_id>")
 ```
 
 ### Step 3: Route Based on Status
@@ -214,46 +206,69 @@ Check the task's `status.name` field and route accordingly:
 8. **Create BitBucket PR** (target: `staging`):
     ```
     mcp__bitbucket__bb_post(
-        path: "/repositories/<WORKSPACE>/<REPO_SLUG>/pullrequests",
+        path: "/repositories/{workspace}/{repo-slug}/pullrequests",
         body: {
-            "title": "<TASK_PREFIX>: Brief description",
-            "source": {"branch": {"name": "feature/<TASK_PREFIX>-short-description"}},
+            "title": "XXX-TXXX: Brief description",
+            "source": {"branch": {"name": "feature/XXX-TXXX-short-description"}},
             "destination": {"branch": {"name": "staging"}},
-            "description": "## Summary\n- Change description\n\n## Zoho Task\n<TASK_PREFIX>"
+            "description": "## Summary\n- Change description\n\n## Zoho Task\nXXX-TXXX"
         }
     )
     ```
+    Get the workspace/repo-slug from the git remote or project's CLAUDE.md.
     Capture the PR number and URL from the response.
 
 9. **Update Zoho task status to "Open"**:
-    The "Open" status ID should be configured in CLAUDE.md.
-
-    **Preview first**: Show the user the status change (e.g., "To do" → "Open") and get confirmation before updating:
+    The "Open" status ID is `1013893000001076068`. Update the task:
     ```
     mcp__zoho-projects__update_task(
-        project_id: "<PROJECT_ID>",
+        project_id: "1013893000022796035",
         task_id: "<task_id>",
-        status_id: "<OPEN_STATUS_ID>"
+        status_id: "1013893000001076068"
     )
     ```
 
-10. **Add Zoho comment** with PR reference and feature summary:
-    Always include a clear summary of what features the PR introduces, written in client-friendly language.
+10. **Preview and add Zoho comment** with PR reference, feature summary, and verification steps:
 
-    **Preview first**: Show the user the full comment content (formatted for readability) and get confirmation before posting.
+    **First, show the user a FORMATTED preview using markdown (not raw HTML) and wait for approval.** Example:
+
+    > ---
+    >
+    > Code ready for internal review:
+    >
+    > - Branch: `feature/CA6-TXXX-description`
+    > - Pull Request: [PR #XX](https://bitbucket.org/...)
+    >
+    > **What this adds:**
+    >
+    > - Feature 1 in plain language
+    > - Feature 2 in plain language
+    >
+    > **How to verify (once deployed):**
+    >
+    > 1. Go to [the relevant page](https://...)
+    > 2. Perform [specific action]
+    > 3. You should see [expected result]
+    >
+    > ---
+    >
+    > Should I post this to Zoho?
+
+    **Only after user approval**, post the comment:
     ```
     mcp__zoho-projects__add_task_comment(
-        project_id: "<PROJECT_ID>",
+        project_id: "1013893000022796035",
         task_id: "<task_id>",
-        content: "Code ready for internal review:<ul><li>Branch: <code>feature/<TASK_PREFIX>-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/<WORKSPACE>/<REPO_SLUG>/pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li><li>Any other key changes</li></ul>"
+        content: "Code ready for internal review:<ul><li>Branch: <code>feature/CA6-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/.../pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href=\"{STAGING_URL}/relevant-page\">the relevant page</a></li><li>Perform [specific action]</li><li>You should see [expected result]</li></ol>"
     )
     ```
 
-    **Important**: The feature summary should:
-    - Describe what users can now DO, not technical implementation details
+    **Important**: The comment MUST include:
+    - **Feature summary**: Describe what users can now DO, not technical implementation details
+    - **Verification steps**: Clear, numbered steps to test the feature on the staging/preview environment
+    - **Staging URL**: Use the staging URL from the project's CLAUDE.md "Environment URLs" section
+    - **Expected outcomes**: What the reviewer should see when following the steps
     - Use client-friendly language (no jargon)
-    - List all key features/changes introduced by the PR
-    - Help reviewers understand the PR's purpose at a glance
 
 #### If status is "Open" or "In Review":
 
@@ -300,7 +315,7 @@ Check the task's `status.name` field and route accordingly:
 4. **Upload screenshots**: Use the Zoho MCP tool to upload each screenshot
    ```
    mcp__zoho-projects__upload_task_attachment(
-       project_id: "<PROJECT_ID>",
+       project_id: "1013893000022796035",
        task_id: "<task_id>",
        file_path: "/absolute/path/to/screenshot.png"
    )
@@ -315,21 +330,25 @@ Check the task's `status.name` field and route accordingly:
      ```
      https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}
      ```
-   - Include production URLs where applicable (use `<PRODUCTION_URL>` from CLAUDE.md)
+   - Include environment URLs where applicable (from project's CLAUDE.md)
    - Keep the entire comment on ONE line (no line breaks except explicit `<br>`)
    - Include "How to verify" steps
 
    Example format:
    ```html
-   [SCREENSHOTS] Feature evidence and verification:<ul><li>Feature description in plain language</li></ul><b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify:</b><ul><li>Visit <a href="<PRODUCTION_URL>/staff/page">the page</a></li><li>Observe the feature working</li></ul>
+   [SCREENSHOTS] Feature evidence and verification:<ul><li>Feature description in plain language</li></ul><b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/page">the page</a></li><li>Perform [specific action]</li><li>Observe [expected result]</li></ol>
    ```
 
-6. **Post the screenshot comment**: Add the comment to the task
+   **Note:** Replace `{PRODUCTION_URL}` with the production URL from the project's CLAUDE.md.
 
-   **Preview first**: Show the user the full comment content (formatted for readability, with embedded image previews if possible) and get confirmation before posting.
+6. **Preview and post the screenshot comment**:
+
+   **First, show the user a FORMATTED preview using markdown (not raw HTML) so they can easily read and review the wording.** Wrap in horizontal rules (`---`) to visually separate it.
+
+   **Only after user approval**, add the comment to the task:
    ```
    mcp__zoho-projects__add_task_comment(
-       project_id: "<PROJECT_ID>",
+       project_id: "1013893000022796035",
        task_id: "<task_id>",
        content: "<html-comment>"
    )
@@ -353,22 +372,36 @@ Reference all relevant PRs in the Zoho comment's internal section.
 Write in plain English, focusing on what the user can now do:
 
 ```html
-This feature is now complete and ready for your review.<ul><li>You can now [describe what they can do]</li><li>[Another user-facing benefit]</li></ul><b>Where to find it:</b><br>Visit <a href="<PRODUCTION_URL>/staff/page">the page name</a> to see this in action.<b>Screenshots:</b><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify this is working:</b><ul><li>Go to [page name]</li><li>You should see [expected result]</li><li>Try [action] and confirm [outcome]</li></ul>
+This feature is now complete and ready for your review.<ul><li>You can now [describe what they can do]</li><li>[Another user-facing benefit]</li></ul><b>Where to find it:</b><br>Visit <a href="{PRODUCTION_URL}/staff/page">the page name</a> to see this in action.<b>Screenshots:</b><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify this is working:</b><ol><li>Go to [page name]</li><li>You should see [expected result]</li><li>Try [action] and confirm [outcome]</li></ol>
 ```
+
+**Note:**
+- Use `<ol>` (ordered list) for verification steps so they appear as numbered steps (1, 2, 3...).
+- Replace `{PRODUCTION_URL}` with the URL from the project's CLAUDE.md "Environment URLs" section.
 
 ### Internal Reference Section (Optional)
 
 If you need to include technical references for internal team members, add a clearly separated section:
 
 ```html
-<hr><b>Internal Reference (for development team):</b><ul><li>Branch: <code>feature/<TASK_PREFIX>-description</code></li><li>Pull Request: <a href="https://bitbucket.org/<WORKSPACE>/<REPO_SLUG>/pull-requests/XX">PR #XX</a></li></ul>
+<hr><b>Internal Reference (for development team):</b><ul><li>Branch: <code>feature/XXX-TXXX-description</code></li><li>Pull Request: <a href="{BITBUCKET_PR_URL}">PR #XX</a></li></ul>
 ```
 
-### Complete Example
+### Complete Example (For "To do" → "Open" with staging URL)
 
 ```html
-This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="<PRODUCTION_URL>/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ul><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ul><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/<TASK_PREFIX>-csv-export</code></li><li>PR: <a href="https://bitbucket.org/<WORKSPACE>/<REPO_SLUG>/pull-requests/45">PR #45</a></li></ul>
+Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>Pull Request: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul><b>What this adds:</b><ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href="{STAGING_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button in the top right</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol>
 ```
+
+### Complete Example (For "Open"/"In Review" with production URL and screenshots)
+
+```html
+This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ol><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>PR: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul>
+```
+
+**Note:** Replace placeholders with actual values:
+- `{STAGING_URL}` / `{PRODUCTION_URL}` - From project's CLAUDE.md "Environment URLs" section
+- `{BITBUCKET_PR_URL}` - The actual PR URL from BitBucket
 
 ## Final Checklist
 
@@ -379,13 +412,20 @@ Before completing the PR workflow:
 - [ ] **Implementation complete**: All required functionality is working
 - [ ] **Tests pass**: Unit/feature tests verify the implementation
 - [ ] **PR created**: BitBucket PR targeting staging branch
-- [ ] **Status updated**: Task status changed to "Open"
-- [ ] **Zoho comment added**: PR link included for internal reference
+- [ ] **Status updated**: Task status changed to "Open" (ID: `1013893000001076068`)
+- [ ] **Comment preview shown**: User has seen and approved the Zoho comment content
+- [ ] **Zoho comment added** with ALL of the following:
+  - [ ] PR link for internal reference
+  - [ ] Feature summary in plain language
+  - [ ] **Verification steps**: Numbered steps to test on staging environment
+  - [ ] **Staging URL**: Link to the relevant page using the staging URL from project's CLAUDE.md
+  - [ ] **Expected outcomes**: What the reviewer should see
 
 ### For "Open"/"In Review" Tasks (Documentation)
 
 Before posting the Zoho screenshot comment, verify:
 
+- [ ] **Preview approved**: User has seen and approved the comment content
 - [ ] **Marker included**: Comment starts with `[SCREENSHOTS]` for later identification
 - [ ] **Language check**: No technical jargon - would a non-developer understand this?
 - [ ] **Action-focused**: Describes what users can DO, not how it was built
@@ -397,33 +437,14 @@ Before posting the Zoho screenshot comment, verify:
 
 ## Important Notes
 
-- **Preview before updating Zoho**: Always show the user what you're about to change before making any Zoho API calls (status updates, comments, edits). This gives them a chance to review and approve the changes.
+- **Project ID**: Check project's CLAUDE.md or use default `1013893000022796035`
+- **Open Status ID**: Use `1013893000001076068` to set task status to "Open"
+- **Environment URLs**: Defined in project's CLAUDE.md under "Environment URLs" section
+  - Use **Staging URL** for verification steps when PR is merged to staging
+  - Use **Production URL** only after deployment to production
+- **BitBucket Repo**: Check project's CLAUDE.md or git remote for workspace/repo-slug
 - **Screenshots are gitignored**: Don't commit screenshot images to the repo (only the test files)
 - **Single-line comments**: Zoho converts newlines to `<br>` tags - keep entire comment on one line
 - **No emojis**: Don't use checkmarks (✅) or other emojis in Zoho comments
 - **No dates**: Don't include "Status Update - January 2026" headers
-- **Screenshot hosting in PRs**: Embed screenshots directly in BitBucket PR descriptions (BitBucket hosts them) - Zoho images are behind a login and won't display
-- **Don't say "ready for review/testing"**: Only say this once changes are actually deployed and testable - code being in a PR doesn't mean it's ready for client review
-- **Edit, don't add corrections**: If a comment needs correcting, use `edit_task_comment` to fix the original rather than adding follow-up comments
-
-## Required Configuration
-
-Add these values to your project's CLAUDE.md file:
-
-```markdown
-# Zoho Projects Configuration
-- **Project ID**: `<your-project-id>`
-- **Open Status ID**: `<your-open-status-id>`
-
-# BitBucket Configuration
-- **Workspace**: `<your-workspace>`
-- **Repository**: `<your-repo-slug>`
-
-# URLs
-- **Production URL**: `<your-production-url>`
-```
-
-To find your status IDs, use:
-```
-mcp__zoho-projects__list_statuses(project_id: "<PROJECT_ID>")
-```
+- **Screenshot hosting**: Upload to Zoho first to get URLs, then embed in BitBucket PR description
