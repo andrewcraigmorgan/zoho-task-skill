@@ -213,7 +213,17 @@ Check the task's `status.name` field and route accordingly:
     git push -u origin feature/CA6-TXXX-short-description
     ```
 
-8. **Create BitBucket PR** (target: `staging`):
+8. **Create BitBucket PR** (target: `staging`, draft mode, with default reviewers):
+
+    First, fetch the repository's default reviewers:
+    ```
+    mcp__bitbucket__bb_get(
+        path: "/repositories/{workspace}/{repo-slug}/default-reviewers",
+        jq: "values[*].{uuid: uuid}"
+    )
+    ```
+
+    Then create the PR, including the default reviewers:
     ```
     mcp__bitbucket__bb_post(
         path: "/repositories/{workspace}/{repo-slug}/pullrequests",
@@ -221,12 +231,15 @@ Check the task's `status.name` field and route accordingly:
             "title": "XXX-TXXX: Brief description",
             "source": {"branch": {"name": "feature/XXX-TXXX-short-description"}},
             "destination": {"branch": {"name": "staging"}},
-            "description": "## Summary\n- Change description\n\n## Zoho Task\nXXX-TXXX"
+            "description": "## Summary\n- Change description\n\n## Zoho Task\nXXX-TXXX",
+            "draft": true,
+            "reviewers": [{"uuid": "{user-uuid-1}"}, {"uuid": "{user-uuid-2}"}]
         }
     )
     ```
     Get the workspace/repo-slug from the git remote or project's CLAUDE.md.
     Capture the PR number and URL from the response.
+    **Note:** PRs are created in draft mode with all default reviewers added.
 
 9. **Update Zoho task status to "Open"**:
     The "Open" status ID is `1013893000001076068`. Update the task:
