@@ -127,6 +127,14 @@ Examples:
 
 This skill fetches the Zoho task and routes to different workflows based on the task status.
 
+### Status Meanings
+
+- **To do**: Task has not been started yet
+- **Open**: Task has been picked up and work is in progress (PR created, awaiting merge/deployment)
+- **In Review**: Feature is visible on production or testing environment and the client can verify it
+
+**Important:** The skill should only change status from "To do" → "Open". The "In Review" status is reserved for when the client can actually see and test the feature - this transition happens manually after deployment.
+
 ### Status: "To do"
 
 The task needs implementation work. The skill will:
@@ -143,7 +151,7 @@ The task needs implementation work. The skill will:
 
 ### Status: "Open" or "In Review"
 
-The task should already be complete. The skill will:
+The task implementation is complete and visible (or will be visible soon). The skill will add documentation and screenshots but will **NOT change the status** (status transitions to "In Review" are done manually after deployment):
 
 1. Read the task description to understand what was implemented
 2. Read existing comments for context on what was done
@@ -461,7 +469,8 @@ Before posting the Zoho screenshot comment, verify:
 ## Important Notes
 
 - **Project ID**: Check project's CLAUDE.md or use default `1013893000022796035`
-- **Open Status ID**: Use `1013893000001076068` to set task status to "Open"
+- **Open Status ID**: Use `1013893000001076068` to set task status to "Open" (only when moving from "To do")
+- **Never set "In Review"**: The skill should never change a task to "In Review" status - that is reserved for when the client can see the feature on production/testing and is done manually
 - **Environment URLs**: Defined in project's CLAUDE.md under "Environment URLs" section
   - Use **Staging URL** for verification steps when PR is merged to staging
   - Use **Production URL** only after deployment to production
