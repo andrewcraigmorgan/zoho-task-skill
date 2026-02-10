@@ -466,11 +466,92 @@ Before posting the Zoho screenshot comment, verify:
 - [ ] **Single line**: Entire comment on ONE line (no unintended line breaks)
 - [ ] **PR reference**: Included in internal section (if applicable)
 
+## Clarification Workflow
+
+When a task requires clarification before implementation can begin:
+
+1. **Identify the need**: If the task description is ambiguous, has multiple valid approaches, or requires client input, draft a clarification question.
+
+2. **Draft the comment**: Create a client-friendly comment presenting the options clearly (see example below).
+
+3. **Get user approval**: Show the preview and wait for explicit approval before posting.
+
+4. **Post comment and update status**: After posting, update the task status to "Awaiting Approval" (or equivalent) to indicate the task is blocked pending client input.
+
+5. **Wait for response**: Do not proceed with implementation until the client responds.
+
+### Clarification Comment Template
+
+```html
+<b>Clarification needed on approach:</b><br><br>We have two options for this feature:<br><br><b>Option A - [Name] (Recommended)</b><ul><li>[Benefit 1]</li><li>[Benefit 2]</li></ul><b>Option B - [Name]</b><ul><li>[Benefit 1]</li><li>[Benefit 2]</li></ul>Which approach would work better for your needs?
+```
+
+### Status Update for Clarification
+
+After posting a clarification comment, update the task status:
+
+```
+mcp__zoho-projects__update_task(
+    project_id: "<project_id>",
+    task_id: "<task_id>",
+    status_id: "<awaiting_approval_status_id>"
+)
+```
+
+## Project Status IDs Reference
+
+Status IDs vary by project. Common statuses for known projects:
+
+### CAHER (CA6) - Project ID: `1013893000022796035`
+| Status | ID |
+|--------|-----|
+| To Do | Check task responses |
+| Open | `1013893000001076068` |
+| In Review | Check task responses |
+| Closed | Check task responses |
+
+### Peachy Nursery (PN1) - Project ID: `1013893000021538003`
+| Status | ID |
+|--------|-----|
+| To Do | `1013893000003815507` |
+| Awaiting Approval | `1013893000016215201` |
+| Backlog | `1013893000003815511` |
+| Closed | `1013893000001076071` |
+
+### Finding Status IDs
+
+If you need a status ID not listed above:
+1. Search for tasks in that status: `mcp__zoho-projects__search(search_term: "status_name", module: "tasks", project_id: "...")`
+2. Look at the `status.id` field in any task response
+3. Add newly discovered status IDs to this reference
+
+## Zoho Task URL Format
+
+When providing links to Zoho tasks, use this URL format:
+
+```
+https://projects.zoho.com/portal/mtcmedialtd#milestone/{milestone_id}/{project_id}/tasklist-detail/{tasklist_id}/task-detail/{task_id}
+```
+
+To construct the URL, extract these IDs from the task response:
+- `milestone.id` → `{milestone_id}`
+- `project.id` → `{project_id}`
+- `tasklist.id` → `{tasklist_id}`
+- `id` → `{task_id}`
+
+**Example:**
+```
+https://projects.zoho.com/portal/mtcmedialtd#milestone/1013893000022630379/1013893000021538003/tasklist-detail/1013893000022509001/task-detail/1013893000023913131
+```
+
+**Note:** The simplified format (`#taskdetail/{project_id}/{task_id}`) does NOT work reliably. Always use the full milestone/tasklist format above.
+
 ## Important Notes
 
 - **Project ID**: Check project's CLAUDE.md or use default `1013893000022796035`
 - **Open Status ID**: Use `1013893000001076068` to set task status to "Open" (only when moving from "To do")
 - **Never set "In Review"**: The skill should never change a task to "In Review" status - that is reserved for when the client can see the feature on production/testing and is done manually
+- **Awaiting Approval**: Use when task is blocked pending client clarification
 - **Environment URLs**: Defined in project's CLAUDE.md under "Environment URLs" section
   - Use **Staging URL** for verification steps when PR is merged to staging
   - Use **Production URL** only after deployment to production
