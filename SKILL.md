@@ -250,12 +250,13 @@ Check the task's `status.name` field and route accordingly:
     **Note:** PRs are created in draft mode with all default reviewers added.
 
 9. **Update Zoho task status to "Open"**:
-    The "Open" status ID is `1013893000001076068`. Update the task:
+    Get the "Open" status ID from the project's CLAUDE.md "Zoho Projects Configuration" section.
+    If not found, check the "Project Status IDs Reference" section below or ask the user.
     ```
     mcp__zoho-projects__update_task(
-        project_id: "1013893000022796035",
+        project_id: "<project_id_from_claude_md>",
         task_id: "<task_id>",
-        status_id: "1013893000001076068"
+        status_id: "<open_status_id_from_claude_md>"
     )
     ```
 
@@ -443,7 +444,7 @@ Before completing the PR workflow:
 - [ ] **Implementation complete**: All required functionality is working
 - [ ] **Tests pass**: Unit/feature tests verify the implementation
 - [ ] **PR created**: BitBucket PR targeting staging branch
-- [ ] **Status updated**: Task status changed to "Open" (ID: `1013893000001076068`)
+- [ ] **Status updated**: Task status changed to "Open" (use status ID from project's CLAUDE.md)
 - [ ] **Comment preview shown**: User has seen and approved the Zoho comment content
 - [ ] **Zoho comment added** with ALL of the following:
   - [ ] PR link for internal reference
@@ -500,9 +501,39 @@ mcp__zoho-projects__update_task(
 
 ## Project Status IDs Reference
 
-Status IDs vary by project. Common statuses for known projects:
+**IMPORTANT: Always check the project's CLAUDE.md first for Zoho configuration.**
 
-### CAHER (CA6) - Project ID: `1013893000022796035`
+Status IDs vary by project. The correct approach is:
+
+### Step 1: Check Project CLAUDE.md
+
+Look for a "Zoho Projects Configuration" section in the project's CLAUDE.md file. This section should contain:
+- Project ID
+- Task Prefix (e.g., PN1, CA6)
+- Status IDs table with Open, To Do, Closed, etc.
+
+**If the project CLAUDE.md has Zoho configuration, use those status IDs.**
+
+### Step 2: If No Configuration Found
+
+If the project's CLAUDE.md does not have a "Zoho Projects Configuration" section:
+
+1. **Ask the user** before proceeding:
+   > "I couldn't find Zoho status IDs in this project's CLAUDE.md. Would you like me to:
+   > 1. Look up the status IDs from the Zoho API and add them to CLAUDE.md?
+   > 2. Use the fallback reference below?"
+
+2. If the user chooses option 1, fetch a task with "Open" status from the project:
+   ```
+   mcp__zoho-projects__search(search_term: "Open", module: "tasks", project_id: "<project_id>")
+   ```
+   Then add the configuration to the project's CLAUDE.md.
+
+### Fallback Reference
+
+Only use these if project CLAUDE.md has no configuration:
+
+#### CAHER (CA6) - Project ID: `1013893000022796035`
 | Status | ID |
 |--------|-----|
 | To Do | Check task responses |
@@ -510,20 +541,21 @@ Status IDs vary by project. Common statuses for known projects:
 | In Review | Check task responses |
 | Closed | Check task responses |
 
-### Peachy Nursery (PN1) - Project ID: `1013893000021538003`
+#### Peachy Nursery (PN1) - Project ID: `1013893000021538003`
 | Status | ID |
 |--------|-----|
+| **Open** | `1013893000001076068` |
 | To Do | `1013893000003815507` |
 | Awaiting Approval | `1013893000016215201` |
 | Backlog | `1013893000003815511` |
 | Closed | `1013893000001076071` |
 
-### Finding Status IDs
+### Finding New Status IDs
 
-If you need a status ID not listed above:
+If you need a status ID not listed:
 1. Search for tasks in that status: `mcp__zoho-projects__search(search_term: "status_name", module: "tasks", project_id: "...")`
 2. Look at the `status.id` field in any task response
-3. Add newly discovered status IDs to this reference
+3. **Add the status ID to the project's CLAUDE.md** (preferred) or this fallback reference
 
 ## Zoho Task URL Format
 
@@ -548,8 +580,8 @@ https://projects.zoho.com/portal/mtcmedialtd#milestone/1013893000022630379/10138
 
 ## Important Notes
 
-- **Project ID**: Check project's CLAUDE.md or use default `1013893000022796035`
-- **Open Status ID**: Use `1013893000001076068` to set task status to "Open" (only when moving from "To do")
+- **Project ID**: Check project's CLAUDE.md "Zoho Projects Configuration" section
+- **Open Status ID**: Get from project's CLAUDE.md "Zoho Projects Configuration" section (varies by project)
 - **Never set "In Review"**: The skill should never change a task to "In Review" status - that is reserved for when the client can see the feature on production/testing and is done manually
 - **Awaiting Approval**: Use when task is blocked pending client clarification
 - **Environment URLs**: Defined in project's CLAUDE.md under "Environment URLs" section
