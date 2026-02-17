@@ -223,15 +223,17 @@ Check the task's `status.name` field and route accordingly:
 
 8. **Create BitBucket PR** (target: `staging`, draft mode, with default reviewers):
 
-    First, fetch the repository's default reviewers:
+    First, fetch the repository's default reviewers WITH display names:
     ```
     mcp__bitbucket__bb_get(
         path: "/repositories/{workspace}/{repo-slug}/default-reviewers",
-        jq: "values[*].{uuid: uuid}"
+        jq: "values[*].{uuid: uuid, display_name: display_name, nickname: nickname}"
     )
     ```
 
-    Then create the PR, including the default reviewers:
+    **CRITICAL: Filter out the author from reviewers.** Bitbucket rejects PRs where the author is listed as a reviewer. Check the "Known Team Members" table in the bitbucket-helpers skill or use `git config user.email` to identify the author, then exclude their UUID.
+
+    Then create the PR with only non-author reviewers:
     ```
     mcp__bitbucket__bb_post(
         path: "/repositories/{workspace}/{repo-slug}/pullrequests",
@@ -241,13 +243,13 @@ Check the task's `status.name` field and route accordingly:
             "destination": {"branch": {"name": "staging"}},
             "description": "## Summary\n- Change description\n\n## Zoho Task\nXXX-TXXX",
             "draft": true,
-            "reviewers": [{"uuid": "{user-uuid-1}"}, {"uuid": "{user-uuid-2}"}]
+            "reviewers": [{"uuid": "{non-author-uuid}"}]  // Exclude author's UUID!
         }
     )
     ```
     Get the workspace/repo-slug from the git remote or project's CLAUDE.md.
     Capture the PR number and URL from the response.
-    **Note:** PRs are created in draft mode with all default reviewers added.
+    **Note:** PRs are created in draft mode. Only include reviewers who are NOT the author.
 
 9. **Update Zoho task status to "Open"**:
     Get the "Open" status ID from the project's CLAUDE.md "Zoho Projects Configuration" section.
