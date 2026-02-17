@@ -1,6 +1,6 @@
 ---
 name: zoho-task
-description: Work on a Zoho Projects task based on its current status. Accepts URL, ID, or prefix (e.g., CA6-T238).
+description: Work on a Zoho Projects task based on its current status. Accepts URL, ID, or prefix (e.g., PRJ-T123).
 ---
 
 # Zoho Task Skill
@@ -111,16 +111,16 @@ When writing verification steps:
 
 The task reference can be:
 
-- **Full URL**: `https://projects.zoho.com/portal/mtcmedialtd#milestone/.../task-detail/1013893000023483027`
-- **Task ID**: `1013893000023483027`
-- **Task prefix/code**: `CA6-T176`
+- **Full URL**: `https://projects.zoho.com/portal/{portal}#milestone/.../task-detail/{task_id}`
+- **Task ID**: The numeric task ID (16+ digits)
+- **Task prefix/code**: e.g., `PRJ-T123`
 
 Examples:
 
 ```
-/zoho-task CA6-T238
-/zoho-task 1013893000023483027
-/zoho-task https://projects.zoho.com/portal/mtcmedialtd#milestone/1013893000022796035/1013893000022802009/tasklist-detail/1013893000023486013/task-detail/1013893000023483027
+/zoho-task PRJ-T123
+/zoho-task 1234567890123456789
+/zoho-task https://projects.zoho.com/portal/{portal}#milestone/{ids}/task-detail/{task_id}
 ```
 
 ## What This Skill Does
@@ -145,7 +145,7 @@ The task needs implementation work. The skill will:
 4. Create a todo list for implementation
 5. Implement the required changes
 6. Run tests to verify the implementation works
-7. Create a feature branch following the naming convention: `feature/CA6-TXXX-description`
+7. Create a feature branch following the naming convention: `feature/{PREFIX}-TXXX-description`
 8. Create BitBucket PR (target: staging)
 9. Update Zoho task status to "Open" and add comment with PR link
 
@@ -174,26 +174,26 @@ Extract the task identifier from the argument:
 
 - **URL format**: Extract the task ID from the URL (the number after `task-detail/`)
 - **Task ID format**: Use the numeric ID directly (16+ digits)
-- **Prefix format**: Use `get_task_by_prefix` to find the task (e.g., `CA6-T176`)
+- **Prefix format**: Use `get_task_by_prefix` to find the task (e.g., `PRJ-T123`)
 
 ### Step 2: Fetch the Task
 
 Use the Zoho Projects MCP tools. **Always include the project_id** for faster, more reliable lookups:
 
 ```
-# For prefix (e.g., CA6-T176) - ALWAYS include project_id
-mcp__zoho-projects__get_task_by_prefix(prefix: "CA6-T176", project_id: "1013893000022796035")
+# For prefix (e.g., PRJ-T123) - ALWAYS include project_id
+mcp__zoho-projects__get_task_by_prefix(prefix: "PRJ-T123", project_id: "<project_id>")
 
 # For task ID
-mcp__zoho-projects__get_task(project_id: "1013893000022796035", task_id: "<task_id>")
+mcp__zoho-projects__get_task(project_id: "<project_id>", task_id: "<task_id>")
 ```
 
-**Note:** The default project ID is `1013893000022796035` (CAHER project). Always use this when searching by prefix.
+**Note:** Get the default project ID from the project's CLAUDE.md "Zoho Projects Configuration" section.
 
 Also fetch task comments for additional context:
 
 ```
-mcp__zoho-projects__list_task_comments(project_id: "1013893000022796035", task_id: "<task_id>")
+mcp__zoho-projects__list_task_comments(project_id: "<project_id>", task_id: "<task_id>")
 ```
 
 ### Step 3: Route Based on Status
@@ -210,7 +210,7 @@ Check the task's `status.name` field and route accordingly:
 3. **Plan the implementation**: Create a todo list with specific steps
 4. **Create branch**: If not already on a feature branch, create one:
    ```
-   git checkout -b feature/CA6-TXXX-short-description
+   git checkout -b feature/{PREFIX}-TXXX-short-description
    ```
 5. **Implement**: Make the necessary code changes
 6. **Test**: Run relevant tests to verify the implementation
@@ -218,7 +218,7 @@ Check the task's `status.name` field and route accordingly:
     ```bash
     git add -A
     git commit -m "feat(scope): description"
-    git push -u origin feature/CA6-TXXX-short-description
+    git push -u origin feature/{PREFIX}-TXXX-short-description
     ```
 
 8. **Create BitBucket PR** (target: `staging`, draft mode, with default reviewers):
@@ -270,7 +270,7 @@ Check the task's `status.name` field and route accordingly:
     >
     > Code ready for internal review:
     >
-    > - Branch: `feature/CA6-TXXX-description`
+    > - Branch: `feature/{PREFIX}-TXXX-description`
     > - Pull Request: [PR #XX](https://bitbucket.org/...)
     >
     > **What this adds:**
@@ -291,9 +291,9 @@ Check the task's `status.name` field and route accordingly:
     **Only after user approval**, post the comment:
     ```
     mcp__zoho-projects__add_task_comment(
-        project_id: "1013893000022796035",
+        project_id: "<project_id>",
         task_id: "<task_id>",
-        content: "Code ready for internal review:<ul><li>Branch: <code>feature/CA6-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/.../pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href=\"{STAGING_URL}/relevant-page\">the relevant page</a></li><li>Perform [specific action]</li><li>You should see [expected result]</li></ol>"
+        content: "Code ready for internal review:<ul><li>Branch: <code>feature/{PREFIX}-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/.../pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href=\"{STAGING_URL}/relevant-page\">the relevant page</a></li><li>Perform [specific action]</li><li>You should see [expected result]</li></ol>"
     )
     ```
 
@@ -310,7 +310,7 @@ Check the task's `status.name` field and route accordingly:
 2. **Create screenshot test**: Write a Playwright E2E test that:
    - Navigates to the relevant page(s)
    - Captures screenshots at key steps
-   - Uses 1440x900 viewport for clear images
+   - Uses the shared viewport config (check project's CLAUDE.md for default size)
    - Saves to `screenshots/<feature-name>/` with numbered filenames
 
    Example test structure:
@@ -318,11 +318,12 @@ Check the task's `status.name` field and route accordingly:
    import { test } from '@playwright/test'
    import fs from 'fs'
    import path from 'path'
+   import { screenshotViewport } from '../screenshot.config'
 
    const screenshotDir = path.join(__dirname, '../../screenshots/<feature-name>')
 
    test.describe('Feature Name - Screenshots', () => {
-       test.use({ viewport: { width: 1440, height: 900 } })
+       test.use({ viewport: screenshotViewport })
 
        test.beforeAll(async () => {
            if (!fs.existsSync(screenshotDir)) {
@@ -349,15 +350,31 @@ Check the task's `status.name` field and route accordingly:
 4. **Upload screenshots**: Use the Zoho MCP tool to upload each screenshot
    ```
    mcp__zoho-projects__upload_task_attachment(
-       project_id: "1013893000022796035",
+       project_id: "<project_id>",
        task_id: "<task_id>",
        file_path: "/absolute/path/to/screenshot.png"
    )
    ```
    Save the `third_party_file_id` and `x-cli-msg` from each response.
 
-5. **Construct the Zoho screenshot comment**: Create an HTML comment following CLAUDE.md guidelines:
-   - **Start with marker**: Begin with `[SCREENSHOTS]` so the comment is identifiable for later editing
+5. **Check for existing screenshot evidence comment**:
+
+   Before creating a new comment, check if a screenshot evidence comment already exists by looking for the hidden HTML marker `<!-- screenshots-evidence -->` in the task comments.
+
+   ```
+   mcp__zoho-projects__list_task_comments(project_id: "...", task_id: "...")
+   ```
+
+   Search each comment's `comment` field for the string `<!-- screenshots-evidence -->`.
+
+   - **If found**: Note the comment ID. You will UPDATE this comment instead of creating a new one.
+   - **If not found**: You will create a new comment.
+
+   **Important**: When an existing screenshot comment is found, inform the user:
+   > "I found an existing screenshot evidence comment (ID: XXX). I'll propose updating it with the new screenshots rather than creating a duplicate."
+
+6. **Construct the Zoho screenshot comment**: Create an HTML comment following CLAUDE.md guidelines:
+   - **No redundant titles**: Do NOT start with "[SCREENSHOTS]", "Feature verification", or similar meta-titles. Jump straight into the content.
    - Client-friendly language (no technical jargon)
    - Use HTML formatting (`<ul>`, `<li>`, `<b>` tags)
    - Embed screenshots inline using the `/image/` endpoint:
@@ -367,28 +384,41 @@ Check the task's `status.name` field and route accordingly:
    - Include environment URLs where applicable (from project's CLAUDE.md)
    - Keep the entire comment on ONE line (no line breaks except explicit `<br>`)
    - Include "How to verify" steps
+   - **End with hidden marker**: Always append `<!-- screenshots-evidence -->` at the end for future identification (this is invisible to readers but allows the system to find and update the comment later)
 
    Example format:
    ```html
-   [SCREENSHOTS] Feature evidence and verification:<ul><li>Feature description in plain language</li></ul><b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/page">the page</a></li><li>Perform [specific action]</li><li>Observe [expected result]</li></ol>
+   The [feature name] is now complete. Here's what you can do:<ul><li>Key capability 1</li><li>Key capability 2</li></ul><b>1. [Screenshot description]:</b><br/><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/page">the page</a></li><li>Perform [specific action]</li><li>Observe [expected result]</li></ol><!-- screenshots-evidence -->
    ```
 
    **Note:** Replace `{PRODUCTION_URL}` with the production URL from the project's CLAUDE.md.
 
-6. **Preview and post the screenshot comment**:
+7. **Preview and post/update the screenshot comment**:
 
    **First, show the user a FORMATTED preview using markdown (not raw HTML) so they can easily read and review the wording.** Wrap in horizontal rules (`---`) to visually separate it.
 
-   **Only after user approval**, add the comment to the task:
+   **Only after user approval**, add or update the comment:
+
+   If **creating new** (no existing screenshot comment found):
    ```
    mcp__zoho-projects__add_task_comment(
-       project_id: "1013893000022796035",
+       project_id: "<project_id>",
        task_id: "<task_id>",
        content: "<html-comment>"
    )
    ```
 
-   **Note**: The `[SCREENSHOTS]` marker makes this comment identifiable. To update screenshots later, find this comment using `list_task_comments` and use `edit_task_comment` with the comment ID.
+   If **updating existing** (screenshot comment already exists):
+   ```
+   mcp__zoho-projects__edit_task_comment(
+       project_id: "<project_id>",
+       task_id: "<task_id>",
+       comment_id: "<existing_comment_id>",
+       content: "<html-comment>"
+   )
+   ```
+
+   **Note**: The hidden `<!-- screenshots-evidence -->` marker makes this comment identifiable for future updates without cluttering the visible content.
 
 ### Step 4: Multiple PRs (When Applicable)
 
@@ -401,17 +431,23 @@ Reference all relevant PRs in the Zoho comment's internal section.
 
 ## Zoho Comment Templates
 
+**IMPORTANT: Be concise.**
+- No meta-titles ("[SCREENSHOTS]", "Feature verification:", "Status update:")
+- No redundant headers ("Screenshots:" before images - they're obviously screenshots)
+- No filler phrases ("This feature is now complete and ready for your review")
+- Jump straight to what matters: what changed, evidence, how to verify
+
 ### For Client Review (Primary Section)
 
-Write in plain English, focusing on what the user can now do:
+Start with what the user can now do, show the evidence, explain how to verify:
 
 ```html
-This feature is now complete and ready for your review.<ul><li>You can now [describe what they can do]</li><li>[Another user-facing benefit]</li></ul><b>Where to find it:</b><br>Visit <a href="{PRODUCTION_URL}/staff/page">the page name</a> to see this in action.<b>Screenshots:</b><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><b>How to verify this is working:</b><ol><li>Go to [page name]</li><li>You should see [expected result]</li><li>Try [action] and confirm [outcome]</li></ol>
+[Brief description of what's new]:<ul><li>[Key capability 1]</li><li>[Key capability 2]</li></ul><b>1. [What this screenshot shows]:</b><br/><img src="..." /><br/><br/><b>2. [What this screenshot shows]:</b><br/><img src="..." /><br/><br/><b>How to verify:</b><ol><li>[Action step]</li><li>[Expected result]</li></ol><!-- screenshots-evidence -->
 ```
 
 **Note:**
-- Use `<ol>` (ordered list) for verification steps so they appear as numbered steps (1, 2, 3...).
-- Replace `{PRODUCTION_URL}` with the URL from the project's CLAUDE.md "Environment URLs" section.
+- Use `<ol>` for verification steps (numbered: 1, 2, 3...)
+- Replace URLs with values from project's CLAUDE.md "Environment URLs" section
 
 ### Internal Reference Section (Optional)
 
@@ -430,7 +466,7 @@ Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export
 ### Complete Example (For "Open"/"In Review" with production URL and screenshots)
 
 ```html
-This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ol><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>PR: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul>
+This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ol><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>PR: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul><!-- screenshots-evidence -->
 ```
 
 **Note:** Replace placeholders with actual values:
@@ -459,8 +495,10 @@ Before completing the PR workflow:
 
 Before posting the Zoho screenshot comment, verify:
 
+- [ ] **Check for existing**: Searched comments for `<!-- screenshots-evidence -->` marker
+- [ ] **Update vs Create**: If existing comment found, use `edit_task_comment`; otherwise use `add_task_comment`
 - [ ] **Preview approved**: User has seen and approved the comment content
-- [ ] **Marker included**: Comment starts with `[SCREENSHOTS]` for later identification
+- [ ] **Hidden marker included**: Comment ends with `<!-- screenshots-evidence -->` for future updates
 - [ ] **Language check**: No technical jargon - would a non-developer understand this?
 - [ ] **Action-focused**: Describes what users can DO, not how it was built
 - [ ] **Screenshots**: All images uploaded and embedded inline (using `/image/` not `/thumbnail/`)
@@ -511,7 +549,7 @@ Status IDs vary by project. The correct approach is:
 
 Look for a "Zoho Projects Configuration" section in the project's CLAUDE.md file. This section should contain:
 - Project ID
-- Task Prefix (e.g., PN1, CA6)
+- Task Prefix (e.g., PRJ)
 - Status IDs table with Open, To Do, Closed, etc.
 
 **If the project CLAUDE.md has Zoho configuration, use those status IDs.**
@@ -531,28 +569,7 @@ If the project's CLAUDE.md does not have a "Zoho Projects Configuration" section
    ```
    Then add the configuration to the project's CLAUDE.md.
 
-### Fallback Reference
-
-Only use these if project CLAUDE.md has no configuration:
-
-#### CAHER (CA6) - Project ID: `1013893000022796035`
-| Status | ID |
-|--------|-----|
-| To Do | Check task responses |
-| Open | `1013893000001076068` |
-| In Review | Check task responses |
-| Closed | Check task responses |
-
-#### Peachy Nursery (PN1) - Project ID: `1013893000021538003`
-| Status | ID |
-|--------|-----|
-| **Open** | `1013893000001076068` |
-| To Do | `1013893000003815507` |
-| Awaiting Approval | `1013893000016215201` |
-| Backlog | `1013893000003815511` |
-| Closed | `1013893000001076071` |
-
-### Finding New Status IDs
+### Finding Status IDs
 
 If you need a status ID not listed:
 1. Search for tasks in that status: `mcp__zoho-projects__search(search_term: "status_name", module: "tasks", project_id: "...")`
@@ -564,21 +581,38 @@ If you need a status ID not listed:
 When providing links to Zoho tasks, use this URL format:
 
 ```
-https://projects.zoho.com/portal/mtcmedialtd#milestone/{milestone_id}/{project_id}/tasklist-detail/{tasklist_id}/task-detail/{task_id}
+https://projects.zoho.com/portal/{portal}#milestone/{milestone_id}/{project_id}/tasklist-detail/{tasklist_id}/task-detail/{task_id}
 ```
 
 To construct the URL, extract these IDs from the task response:
+- Portal name from the project's CLAUDE.md or Zoho configuration
 - `milestone.id` → `{milestone_id}`
 - `project.id` → `{project_id}`
 - `tasklist.id` → `{tasklist_id}`
 - `id` → `{task_id}`
 
-**Example:**
-```
-https://projects.zoho.com/portal/mtcmedialtd#milestone/1013893000022630379/1013893000021538003/tasklist-detail/1013893000022509001/task-detail/1013893000023913131
-```
-
 **Note:** The simplified format (`#taskdetail/{project_id}/{task_id}`) does NOT work reliably. Always use the full milestone/tasklist format above.
+
+## Screenshot Viewport Configuration
+
+Screenshot tests should use a shared viewport config that can be customized per-project.
+
+### Default Viewport
+
+The default viewport for new projects is **Desktop (1440x900)**. Individual projects can override this in their `screenshot.config.ts`.
+
+### Common Viewport Sizes
+
+| Device | Dimensions | Use Case |
+|--------|------------|----------|
+| Desktop | 1440x900 | Staff dashboard, admin screens (default) |
+| iPad Portrait | 768x1024 | Client-facing forms, mobile-first UI |
+| iPad Landscape | 1024x768 | Tablet landscape mode |
+| Mobile | 390x844 | iPhone-style mobile testing |
+
+### Project Configuration
+
+Check the project's CLAUDE.md for a "Screenshot Configuration" section specifying the preferred viewport. The project's `tests/e2e/screenshot.config.ts` defines the actual default used by tests.
 
 ## Important Notes
 
