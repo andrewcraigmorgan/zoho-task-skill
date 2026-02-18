@@ -31,7 +31,15 @@ The task reference can be:
 
 This skill fetches a Zoho Projects task and routes to different workflows based on status:
 
-### Status: "To do"
+### Status: "Awaiting Approval" or "Need more information" (Scoping/Clarification)
+- Reads task description and existing comments
+- Explores codebase to understand technical considerations
+- Identifies gaps, ambiguities, and decision points
+- Generates 5-8 targeted clarification questions
+- Posts questions to Zoho (after user approval)
+- Keeps status unchanged until client responds
+
+### Status: "To do" (Implementation)
 - Reads task description and comments
 - Explores codebase to understand requirements
 - Creates implementation todo list
@@ -39,7 +47,7 @@ This skill fetches a Zoho Projects task and routes to different workflows based 
 - Creates feature branch and BitBucket PR
 - Updates task status to "Open" with PR link
 
-### Status: "Open" or "In Review"
+### Status: "Open" or "In Review" (Documentation)
 - Creates Playwright E2E test for screenshots
 - Captures evidence of the feature working
 - Uploads screenshots to Zoho task
