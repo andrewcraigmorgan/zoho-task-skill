@@ -170,10 +170,12 @@ This skill fetches the Zoho task and routes to different workflows based on the 
 ### Status Meanings
 
 - **To do**: Task has not been started yet
+- **Awaiting Approval**: Task is in the scoping phase - requirements need clarification before implementation
+- **Need more information**: Task is blocked waiting for client input (similar to Awaiting Approval)
 - **Open**: Task has been picked up and work is in progress (PR created, awaiting merge/deployment)
 - **In Review**: Feature is visible on production or testing environment and the client can verify it
 
-**Important:** The skill should only change status from "To do" → "Open". The "In Review" status is reserved for when the client can actually see and test the feature - this transition happens manually after deployment.
+**Important:** The skill should only change status from "To do" → "Open". The "In Review" status is reserved for when the client can actually see and test the feature - this transition happens manually after deployment. Tasks in "Awaiting Approval" or "Need more information" stay in that status until the client responds.
 
 ### Status: "To do"
 
@@ -188,6 +190,19 @@ The task needs implementation work. The skill will:
 7. Create a feature branch following the naming convention: `feature/{PREFIX}-TXXX-description`
 8. Create BitBucket PR (target: staging)
 9. Update Zoho task status to "Open" and add comment with PR link
+
+### Status: "Awaiting Approval" or "Need more information"
+
+The task is blocked pending client input - either in the scoping phase or waiting for additional information. The skill will:
+
+1. Read the task description to understand the initial request
+2. Read any existing comments for prior context or partial answers
+3. Explore the codebase to understand what's involved and identify technical considerations
+4. Identify gaps, ambiguities, or decision points that need client input
+5. Generate targeted clarification questions (5-8 questions max)
+6. Preview questions in client-friendly language for user approval
+7. Post approved questions as a Zoho comment
+8. Keep status unchanged (waiting for client response)
 
 ### Status: "Open" or "In Review"
 
@@ -344,6 +359,111 @@ Check the task's `status.name` field and route accordingly:
     - **Expected outcomes**: What the reviewer should see when following the steps
     - Use client-friendly language (no jargon)
 
+#### If status is "Awaiting Approval" or "Need more information":
+
+The task is blocked pending client input. Generate clarification questions to gather the information needed before implementation can proceed.
+
+1. **Understand the request**: Read the task description carefully to identify:
+   - What the client is asking for
+   - Any stated constraints or preferences
+   - Implicit assumptions that need validation
+
+2. **Review existing comments**: Check for:
+   - Prior clarifications or partial answers
+   - Questions already asked (don't repeat them)
+   - Context that narrows down the scope
+
+3. **Explore the codebase**: Use the Task tool with `subagent_type=Explore` to understand:
+   - Current implementation of related features
+   - Technical constraints or considerations
+   - Patterns that might influence the approach
+   - What's feasible vs. what requires significant changes
+
+4. **Identify clarification needs**: Look for gaps in these categories:
+
+   **Requirements & Acceptance Criteria**
+   - What specific behavior is expected?
+   - What are the success criteria?
+   - Are there edge cases to consider?
+
+   **User Experience**
+   - Who will use this feature?
+   - What workflow should it follow?
+   - Are there visual/UI preferences?
+
+   **Scope & Boundaries**
+   - What's explicitly in scope?
+   - What should be excluded?
+   - Are there related changes that should wait for a future task?
+
+   **Technical Decisions** (frame in user-friendly terms)
+   - Are there multiple valid approaches? Present as options with trade-offs
+   - Are there dependencies on other features or data?
+   - Are there constraints the client should know about?
+
+   **Data & Content**
+   - What data should be displayed/captured?
+   - Are there specific formats or validation rules?
+   - Who can see/edit this data?
+
+5. **Draft clarification questions**: Create 5-8 targeted questions that:
+   - Are specific and actionable (not vague)
+   - Use plain language (no technical jargon)
+   - Present options where applicable (helps client decide faster)
+   - Are numbered for easy reference in responses
+   - Focus on decisions that block implementation
+
+6. **Preview for user approval**: Show the questions in a formatted preview:
+
+   > ---
+   >
+   > **Before we begin implementation, I have a few questions to make sure we build exactly what you need:**
+   >
+   > 1. **[Question about requirement]**
+   >    - Option A: [Description]
+   >    - Option B: [Description]
+   >
+   > 2. **[Question about scope]**
+   >
+   > 3. **[Question about user experience]**
+   >
+   > ...
+   >
+   > ---
+   >
+   > Should I post these questions to the Zoho task?
+
+7. **Post to Zoho** (only after user approval):
+   ```
+   mcp__zoho-projects__add_task_comment(
+       project_id: "<project_id>",
+       task_id: "<task_id>",
+       content: "<b>Before we begin implementation, I have a few questions to make sure we build exactly what you need:</b><br><br><b>1. [Question]</b><ul><li>Option A: [Description]</li><li>Option B: [Description]</li></ul><b>2. [Question]</b><br><br>..."
+   )
+   ```
+
+8. **Keep status unchanged**: Do NOT change the status. The task remains in its current state ("Awaiting Approval" or "Need more information") until the client responds with answers.
+
+**Question Quality Guidelines:**
+
+- **Be specific**: "Should the export include all columns or just visible ones?" not "What should the export contain?"
+- **Offer options**: When there are clear choices, list them with brief descriptions of trade-offs
+- **Avoid yes/no when possible**: Open questions get more useful answers
+- **Group related questions**: If multiple questions relate to one topic, present them together
+- **Prioritize blockers**: Ask about things that would change the implementation approach first
+- **Skip obvious answers**: Don't ask about things clearly stated in the description
+
+**Example Questions by Category:**
+
+| Category | Example Question |
+|----------|------------------|
+| Scope | "Should this feature apply to all users, or just managers?" |
+| UX | "Would you prefer this as a button on the page, or in the dropdown menu?" |
+| Data | "What information should appear in the notification - just the title, or the full details?" |
+| Options | "We could show this as: (A) a popup dialog, or (B) a slide-in panel. Which feels right?" |
+| Edge cases | "If a user hasn't completed their profile, should they still see this option?" |
+| Priority | "Should this replace the current behavior, or work alongside it?" |
+
 #### If status is "Open" or "In Review":
 
 1. **Understand what was done**: Read the description and comments
@@ -449,7 +569,8 @@ Check the task's `status.name` field and route accordingly:
    Save the `third_party_file_id` and `x-cli-msg` from each response.
 
 7. **Construct the Zoho screenshot comment**: Create an HTML comment following CLAUDE.md guidelines:
-   - **No redundant titles**: Do NOT start with "[SCREENSHOTS]", "Feature verification", or similar meta-titles. Jump straight into the content.
+   - **No superfluous language**: Do NOT use filler phrases like "Implementation verified complete:", "This feature is now complete", "Here's what you can do:", "Feature verification:", etc. Start directly with the content.
+   - **No redundant titles**: Do NOT start with "[SCREENSHOTS]", "Status update:", or similar meta-titles.
    - Client-friendly language (no technical jargon)
    - Use HTML formatting (`<ul>`, `<li>`, `<b>` tags)
    - Embed screenshots inline using the `/image/` endpoint:
@@ -463,7 +584,7 @@ Check the task's `status.name` field and route accordingly:
 
    Example format:
    ```html
-   The [feature name] is now complete. Here's what you can do:<ul><li>Key capability 1</li><li>Key capability 2</li></ul><b>1. [Screenshot description]:</b><br/><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/page">the page</a></li><li>Perform [specific action]</li><li>Observe [expected result]</li></ol><!-- screenshots-evidence -->
+   <ul><li>Key capability 1</li><li>Key capability 2</li></ul><b>1. [Screenshot description]:</b><br/><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/page">the page</a></li><li>Perform [specific action]</li><li>Observe [expected result]</li></ol><!-- screenshots-evidence -->
    ```
 
    **Note:** Replace `{PRODUCTION_URL}` with the production URL from the project's CLAUDE.md.
@@ -532,6 +653,18 @@ If you need to include technical references for internal team members, add a cle
 <hr><b>Internal Reference (for development team):</b><ul><li>Branch: <code>feature/XXX-TXXX-description</code></li><li>Pull Request: <a href="{BITBUCKET_PR_URL}">PR #XX</a></li></ul>
 ```
 
+### Scoping Questions (For "Awaiting Approval")
+
+```html
+<b>Before we begin implementation, I have a few questions to make sure we build exactly what you need:</b><br><br><b>1. [Requirement question]</b><br>[Context or options if applicable]<br><br><b>2. [Scope question]</b><ul><li>Option A: [Description]</li><li>Option B: [Description]</li></ul><b>3. [UX question]</b><br><br><b>4. [Data/content question]</b><br><br><b>5. [Priority/edge case question]</b><br><br>Once I have your answers, I can proceed with implementation.<!-- scoping-questions -->
+```
+
+**Note:**
+- Include the `<!-- scoping-questions -->` marker at the end for future reference
+- Number questions for easy reference in client responses
+- Use `<ul><li>` for options, plain `<br>` for simple questions
+- Keep questions concise but specific
+
 ### Complete Example (For "To do" → "Open" with staging URL)
 
 ```html
@@ -541,7 +674,7 @@ Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export
 ### Complete Example (For "Open"/"In Review" with production URL and screenshots)
 
 ```html
-This feature is now complete and ready for your review.<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<b>Screenshots:</b><br><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><b>How to verify this is working:</b><ol><li>Go to the Sessions page</li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol><hr><b>Internal Reference:</b><ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>PR: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul><!-- screenshots-evidence -->
+<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br/>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<br/><br/><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol><!-- screenshots-evidence -->
 ```
 
 **Note:** Replace placeholders with actual values:
@@ -549,6 +682,22 @@ This feature is now complete and ready for your review.<ul><li>Staff can now dow
 - `{BITBUCKET_PR_URL}` - The actual PR URL from BitBucket
 
 ## Final Checklist
+
+### For "Awaiting Approval" or "Need more information" Tasks (Scoping/Clarification)
+
+Before posting clarification questions:
+
+- [ ] **Read task description**: Understand what the client is asking for
+- [ ] **Check existing comments**: Look for prior context or partial answers
+- [ ] **Explore codebase**: Understand technical considerations that inform questions
+- [ ] **Questions are specific**: Each question is actionable, not vague
+- [ ] **No jargon**: Questions use plain language a non-technical client can understand
+- [ ] **Options provided**: Where applicable, present choices with brief descriptions
+- [ ] **5-8 questions max**: Focused on decisions that block implementation
+- [ ] **No duplicates**: Questions not already asked in previous comments
+- [ ] **Preview approved**: User has seen and approved the questions
+- [ ] **Hidden marker included**: Comment ends with `<!-- scoping-questions -->` for tracking
+- [ ] **Status unchanged**: Keep current status (do NOT change it)
 
 ### For "To do" Tasks (Implementation)
 
