@@ -364,7 +364,7 @@ Check the task's `status.name` field and route accordingly:
     mcp__zoho-projects__add_task_comment(
         project_id: "<project_id>",
         task_id: "<task_id>",
-        content: "Code ready for internal review:<ul><li>Branch: <code>feature/{PREFIX}-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/.../pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href=\"{PRODUCTION_URL}/relevant-page\">the relevant page</a></li><li>Perform [specific action]</li><li>You should see [expected result]</li></ol>"
+        content: "Code ready for internal review:<ul><li>Branch: <code>feature/{PREFIX}-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/.../pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href=\"{PREVIEW_URL}/relevant-page\">the relevant page</a></li><li>Perform [specific action]</li><li>You should see [expected result]</li></ol>"
     )
     ```
 
@@ -600,10 +600,10 @@ The task is blocked pending client input. Generate clarification questions to ga
 
    Example format:
    ```html
-   <ul><li>Key capability 1</li><li>Key capability 2</li></ul><b>1. [Screenshot description]:</b><br/><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/page">the page</a></li><li>Perform [specific action]</li><li>Observe [expected result]</li></ol><!-- screenshots-evidence -->
+   <ul><li>Key capability 1</li><li>Key capability 2</li></ul><b>1. [Screenshot description]:</b><br/><img src="https://previewengine-accl.zoho.com/image/WD/{file_id}?x-cli-msg={encoded_data}" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PREVIEW_URL}/staff/page">the page</a></li><li>Perform [specific action]</li><li>Observe [expected result]</li></ol><!-- screenshots-evidence -->
    ```
 
-   **Note:** Replace `{PRODUCTION_URL}` with the production URL from the project's CLAUDE.md.
+   **Note:** Replace `{PREVIEW_URL}` with the preview URL from the project's CLAUDE.md.
 
 8. **Preview and post/update the screenshot comment**:
 
@@ -684,17 +684,17 @@ If you need to include technical references for internal team members, add a cle
 ### Complete Example (For "To do" → "Open")
 
 ```html
-Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>Pull Request: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul><b>What this adds:</b><ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button in the top right</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol>
+Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>Pull Request: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul><b>What this adds:</b><ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href="{PREVIEW_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button in the top right</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol>
 ```
 
-### Complete Example (For "Open"/"In Review" with production URL and screenshots)
+### Complete Example (For "Open"/"In Review" with screenshots)
 
 ```html
-<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br/>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<br/><br/><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol><!-- screenshots-evidence -->
+<ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>Where to find it:</b><br/>Visit <a href="{PREVIEW_URL}/staff/sessions">the Sessions page</a> and look for the "Export" button in the top right.<br/><br/><img src="https://previewengine-accl.zoho.com/image/WD/abc123?x-cli-msg=xyz" /><br/><br/><b>How to verify:</b><ol><li>Visit <a href="{PREVIEW_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol><!-- screenshots-evidence -->
 ```
 
 **Note:** Replace placeholders with actual values:
-- `{PRODUCTION_URL}` - The preview URL from project's CLAUDE.md "Environment URLs" section (where clients verify features)
+- `{PREVIEW_URL}` - The preview URL from project's CLAUDE.md "Environment URLs" section (where clients verify features)
 - `{BITBUCKET_PR_URL}` - The actual PR URL from BitBucket
 
 ## Final Checklist
