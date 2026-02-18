@@ -89,19 +89,59 @@ The client reviewing Zoho updates is **non-technical**. All comments, updates, a
 - Framework or library names
 - Database or architecture changes
 
-## Preview/Staging Environment
+## MANDATORY: Clickable Preview Links
 
-**All Zoho comments MUST include verification steps using the staging environment.**
+**Every Zoho comment MUST include a clickable link to the working feature.**
+
+The client should be able to click directly from the Zoho comment to see the feature in action. This is non-negotiable.
+
+### Where to Find URLs
 
 The staging and production URLs are defined in the **project's CLAUDE.md** under "Environment URLs". Look for:
-- **Staging URL** - For testing PRs before production (use in verification steps)
-- **Production URL** - Live environment (only reference after deployment)
+- **Staging URL** - For testing PRs before production
+- **Production URL** - Live environment (reference after deployment)
 
-When writing verification steps:
-- Always use the **staging URL** for tasks in "To do" → "Open" workflow (PR merged to staging)
-- Use the **production URL** only for tasks in "Open"/"In Review" that have been deployed to production
-- Provide specific page paths (e.g., `/staff/settings`, `/staff/manage-team`)
-- Include login instructions if relevant (e.g., "Log in as a superuser")
+### When to Use Each URL
+
+| Task Status | URL to Use | Example |
+|-------------|------------|---------|
+| "To do" → "Open" | Staging URL | `<a href="{STAGING_URL}/staff/sessions">the Sessions page</a>` |
+| "Open" / "In Review" | Production URL | `<a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a>` |
+
+### Link Requirements
+
+Every comment with verification steps MUST include:
+
+1. **At least one clickable link** to where the feature can be seen/tested
+2. **Specific page paths** (e.g., `/staff/settings`, `/staff/manage-team`) - not just the base URL
+3. **Descriptive link text** - use "the Sessions page" not "click here" or raw URLs
+4. **Login instructions** if relevant (e.g., "Log in as a superuser")
+
+### Examples
+
+**Good** - Clickable link with specific path:
+```html
+<ol><li>Visit <a href="https://hercitizenadvice.mtcserver26.com/staff/sessions">the Sessions page</a></li>...</ol>
+```
+
+**Bad** - No clickable link:
+```html
+<ol><li>Go to the Sessions page</li>...</ol>
+```
+
+**Bad** - Only base URL without specific path:
+```html
+<ol><li>Visit <a href="https://hercitizenadvice.mtcserver26.com">the site</a> and navigate to Sessions</li>...</ol>
+```
+
+### Validation Before Posting
+
+Before posting ANY comment with verification steps, check:
+- [ ] Is there at least one `<a href="...">` link in the verification steps?
+- [ ] Does the link include the full path to the relevant page?
+- [ ] Is the URL from the correct environment (staging vs production)?
+
+If any check fails, add the missing link before showing the preview to the user.
 
 ## Usage
 
@@ -523,7 +563,7 @@ Before completing the PR workflow:
   - [ ] PR link for internal reference
   - [ ] Feature summary in plain language
   - [ ] **Verification steps**: Numbered steps to test on staging environment
-  - [ ] **Staging URL**: Link to the relevant page using the staging URL from project's CLAUDE.md
+  - [ ] **CLICKABLE LINK**: At least one `<a href="...">` link to the specific page where the feature can be tested (MANDATORY)
   - [ ] **Expected outcomes**: What the reviewer should see
 
 ### For "Open"/"In Review" Tasks (Documentation)
@@ -541,7 +581,7 @@ If proceeding with screenshot work:
 - [ ] **Language check**: No technical jargon - would a non-developer understand this?
 - [ ] **Action-focused**: Describes what users can DO, not how it was built
 - [ ] **Screenshots**: All images uploaded and embedded inline (using `/image/` not `/thumbnail/`)
-- [ ] **Links**: Production URLs included for relevant pages
+- [ ] **CLICKABLE LINK (MANDATORY)**: At least one `<a href="{PRODUCTION_URL}/specific/path">` in verification steps
 - [ ] **Verification steps**: Clear, actionable steps the client can follow
 - [ ] **Single line**: Entire comment on ONE line (no unintended line breaks)
 - [ ] **Update vs Create**: If existing comment found, use `edit_task_comment`; otherwise use `add_task_comment`
@@ -655,6 +695,7 @@ Check the project's CLAUDE.md for a "Screenshot Configuration" section specifyin
 
 ## Important Notes
 
+- **CLICKABLE LINKS ARE MANDATORY**: Every comment with verification steps MUST include at least one `<a href="...">` link to the specific page where the feature can be tested. Never describe navigation without providing a direct link.
 - **Project ID**: Check project's CLAUDE.md "Zoho Projects Configuration" section
 - **Open Status ID**: Get from project's CLAUDE.md "Zoho Projects Configuration" section (varies by project)
 - **Never set "In Review"**: The skill should never change a task to "In Review" status - that is reserved for when the client can see the feature on production/testing and is done manually
