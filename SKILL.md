@@ -95,18 +95,34 @@ The client reviewing Zoho updates is **non-technical**. All comments, updates, a
 
 The client should be able to click directly from the Zoho comment to see the feature in action. This is non-negotiable.
 
-### Where to Find URLs
+### Where to Find the Preview URL
 
-The staging and production URLs are defined in the **project's CLAUDE.md** under "Environment URLs". Look for:
-- **Staging URL** - For testing PRs before production
-- **Production URL** - Live environment (reference after deployment)
+**Each project defines its own preview URL in the project's CLAUDE.md** under "Environment URLs". This is the URL where clients verify features.
 
-### When to Use Each URL
+Look for a section like:
+```
+## Environment URLs
+| Environment | URL | Description |
+| Production | https://app.example.com | Live environment |
+```
 
-| Task Status | URL to Use | Example |
-|-------------|------------|---------|
-| "To do" → "Open" | Staging URL | `<a href="{STAGING_URL}/staff/sessions">the Sessions page</a>` |
-| "Open" / "In Review" | Production URL | `<a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a>` |
+Or explicit guidance like:
+```
+**Preview URL for Zoho comments:** Use **Production** (`https://app.example.com`) for client verification steps.
+```
+
+### CRITICAL: Always Use the Project's Preview URL
+
+**For ALL Zoho comments with verification steps, use the preview URL defined in the project's CLAUDE.md.**
+
+- The preview URL varies by project - check CLAUDE.md each time
+- Clients click these links to verify features work
+- Using the wrong URL means the client cannot verify the feature
+
+**Before posting ANY Zoho comment, verify:**
+- [ ] You have checked the project's CLAUDE.md for the correct preview URL
+- [ ] All `<a href="...">` links use the URL specified for client verification
+- [ ] No internal-only URLs (staging, localhost, dev servers) appear in the comment
 
 ### Link Requirements
 
@@ -139,7 +155,7 @@ Every comment with verification steps MUST include:
 Before posting ANY comment with verification steps, check:
 - [ ] Is there at least one `<a href="...">` link in the verification steps?
 - [ ] Does the link include the full path to the relevant page?
-- [ ] Is the URL from the correct environment (staging vs production)?
+- [ ] Is the URL from the project's CLAUDE.md (the preview URL where clients verify features)?
 
 If any check fails, add the missing link before showing the preview to the user.
 
@@ -348,14 +364,14 @@ Check the task's `status.name` field and route accordingly:
     mcp__zoho-projects__add_task_comment(
         project_id: "<project_id>",
         task_id: "<task_id>",
-        content: "Code ready for internal review:<ul><li>Branch: <code>feature/{PREFIX}-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/.../pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href=\"{STAGING_URL}/relevant-page\">the relevant page</a></li><li>Perform [specific action]</li><li>You should see [expected result]</li></ol>"
+        content: "Code ready for internal review:<ul><li>Branch: <code>feature/{PREFIX}-TXXX-description</code></li><li>Pull Request: <a href=\"https://bitbucket.org/.../pull-requests/XX\">PR #XX</a></li></ul><b>What this adds:</b><ul><li>Feature 1 in plain language (what users can now do)</li><li>Feature 2 in plain language</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href=\"{PRODUCTION_URL}/relevant-page\">the relevant page</a></li><li>Perform [specific action]</li><li>You should see [expected result]</li></ol>"
     )
     ```
 
     **Important**: The comment MUST include:
     - **Feature summary**: Describe what users can now DO, not technical implementation details
-    - **Verification steps**: Clear, numbered steps to test the feature on the staging/preview environment
-    - **Staging URL**: Use the staging URL from the project's CLAUDE.md "Environment URLs" section
+    - **Verification steps**: Clear, numbered steps to test the feature
+    - **Preview URL**: Use the preview URL from the project's CLAUDE.md "Environment URLs" section (where clients verify features)
     - **Expected outcomes**: What the reviewer should see when following the steps
     - Use client-friendly language (no jargon)
 
@@ -665,10 +681,10 @@ If you need to include technical references for internal team members, add a cle
 - Use `<ul><li>` for options, plain `<br>` for simple questions
 - Keep questions concise but specific
 
-### Complete Example (For "To do" → "Open" with staging URL)
+### Complete Example (For "To do" → "Open")
 
 ```html
-Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>Pull Request: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul><b>What this adds:</b><ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href="{STAGING_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button in the top right</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol>
+Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export</code></li><li>Pull Request: <a href="{BITBUCKET_PR_URL}">PR #45</a></li></ul><b>What this adds:</b><ul><li>Staff can now download session data as a spreadsheet file</li><li>The download includes all visible columns and respects any active filters</li></ul><b>How to verify (once deployed):</b><ol><li>Go to <a href="{PRODUCTION_URL}/staff/sessions">the Sessions page</a></li><li>Click the "Export" button in the top right</li><li>A spreadsheet file should download to your computer</li><li>Open the file to confirm it contains the session data</li></ol>
 ```
 
 ### Complete Example (For "Open"/"In Review" with production URL and screenshots)
@@ -678,7 +694,7 @@ Code ready for internal review:<ul><li>Branch: <code>feature/XXX-TXXX-csv-export
 ```
 
 **Note:** Replace placeholders with actual values:
-- `{STAGING_URL}` / `{PRODUCTION_URL}` - From project's CLAUDE.md "Environment URLs" section
+- `{PRODUCTION_URL}` - The preview URL from project's CLAUDE.md "Environment URLs" section (where clients verify features)
 - `{BITBUCKET_PR_URL}` - The actual PR URL from BitBucket
 
 ## Final Checklist
@@ -711,7 +727,7 @@ Before completing the PR workflow:
 - [ ] **Zoho comment added** with ALL of the following:
   - [ ] PR link for internal reference
   - [ ] Feature summary in plain language
-  - [ ] **Verification steps**: Numbered steps to test on staging environment
+  - [ ] **Verification steps**: Numbered steps to test (using project's preview URL from CLAUDE.md)
   - [ ] **CLICKABLE LINK**: At least one `<a href="...">` link to the specific page where the feature can be tested (MANDATORY)
   - [ ] **Expected outcomes**: What the reviewer should see
 
@@ -730,7 +746,7 @@ If proceeding with screenshot work:
 - [ ] **Language check**: No technical jargon - would a non-developer understand this?
 - [ ] **Action-focused**: Describes what users can DO, not how it was built
 - [ ] **Screenshots**: All images uploaded and embedded inline (using `/image/` not `/thumbnail/`)
-- [ ] **CLICKABLE LINK (MANDATORY)**: At least one `<a href="{PRODUCTION_URL}/specific/path">` in verification steps
+- [ ] **CLICKABLE LINK (MANDATORY)**: At least one `<a href="{PREVIEW_URL}/specific/path">` in verification steps (use URL from project's CLAUDE.md)
 - [ ] **Verification steps**: Clear, actionable steps the client can follow
 - [ ] **Single line**: Entire comment on ONE line (no unintended line breaks)
 - [ ] **Update vs Create**: If existing comment found, use `edit_task_comment`; otherwise use `add_task_comment`
@@ -849,9 +865,7 @@ Check the project's CLAUDE.md for a "Screenshot Configuration" section specifyin
 - **Open Status ID**: Get from project's CLAUDE.md "Zoho Projects Configuration" section (varies by project)
 - **Never set "In Review"**: The skill should never change a task to "In Review" status - that is reserved for when the client can see the feature on production/testing and is done manually
 - **Awaiting Approval**: Use when task is blocked pending client clarification
-- **Environment URLs**: Defined in project's CLAUDE.md under "Environment URLs" section
-  - Use **Staging URL** for verification steps when PR is merged to staging
-  - Use **Production URL** only after deployment to production
+- **Preview URL**: Each project defines its preview URL in CLAUDE.md under "Environment URLs" - ALWAYS use this URL for client verification links in Zoho comments
 - **BitBucket Repo**: Check project's CLAUDE.md or git remote for workspace/repo-slug
 - **Screenshots are gitignored**: Don't commit screenshot images to the repo (only the test files)
 - **Single-line comments**: Zoho converts newlines to `<br>` tags - keep entire comment on one line
