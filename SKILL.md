@@ -307,7 +307,58 @@ Check the task's `status.name` field and route accordingly:
 #### If status is "Open" or "In Review":
 
 1. **Understand what was done**: Read the description and comments
-2. **Create screenshot test**: Write a Playwright E2E test that:
+
+2. **Check for existing screenshot evidence comment FIRST**:
+
+   Before doing any work, check if a screenshot evidence comment already exists:
+
+   ```
+   mcp__zoho-projects__list_task_comments(project_id: "...", task_id: "...")
+   ```
+
+   Search each comment's `comment` field for the string `<!-- screenshots-evidence -->`.
+
+   **If an existing comment is found**, ask the user what they want to do:
+
+   > "I found an existing screenshot evidence comment on this task.
+   >
+   > What would you like to do?
+   > 1. **Update screenshots** - Capture new screenshots and replace the existing ones
+   > 2. **Edit comment text** - Modify the wording without changing screenshots
+   > 3. **Skip** - No changes needed to the evidence comment
+   >
+   > (Or describe what specific changes you'd like to make)"
+
+   **Wait for the user's response before proceeding.** Based on their answer:
+   - If "update screenshots" or similar → Continue to step 3 (create screenshot test)
+   - If "edit comment text" → Show the current comment content and ask what to change, then update
+   - If "skip" → Do not modify the comment; ask if there's anything else to do for this task
+
+   **If no existing comment is found**, proceed to step 3 to create screenshots and a new comment.
+
+3. **Ensure latest staging changes are merged**:
+
+   Before running any screenshot tests, ensure your branch has the latest staging changes to capture current styles:
+
+   ```bash
+   # Fetch latest and merge staging (don't checkout - may be used by another worktree)
+   git fetch origin
+   git merge origin/staging --no-edit
+   ```
+
+   If using Docker, rebuild the frontend after merging:
+   ```bash
+   docker compose exec app npm run build
+   ```
+
+   If running locally:
+   ```bash
+   npm run build
+   ```
+
+   **Why this matters:** Screenshot tests capture the UI as it appears. If your branch is behind staging, the screenshots will show outdated styles or missing features, requiring them to be recaptured later.
+
+4. **Create screenshot test**: Write a Playwright E2E test that:
    - Navigates to the relevant page(s)
    - Captures screenshots at key steps
    - Uses the shared viewport config (check project's CLAUDE.md for default size)
@@ -342,12 +393,12 @@ Check the task's `status.name` field and route accordingly:
    })
    ```
 
-3. **Run the test**: Execute the screenshot test
+5. **Run the test**: Execute the screenshot test
    ```bash
    CI=1 PLAYWRIGHT_BASE_URL=http://localhost:${APP_PORT} npx playwright test <test-file> --project=chromium
    ```
 
-4. **Upload screenshots**: Use the Zoho MCP tool to upload each screenshot
+6. **Upload screenshots**: Use the Zoho MCP tool to upload each screenshot
    ```
    mcp__zoho-projects__upload_task_attachment(
        project_id: "<project_id>",
@@ -357,23 +408,7 @@ Check the task's `status.name` field and route accordingly:
    ```
    Save the `third_party_file_id` and `x-cli-msg` from each response.
 
-5. **Check for existing screenshot evidence comment**:
-
-   Before creating a new comment, check if a screenshot evidence comment already exists by looking for the hidden HTML marker `<!-- screenshots-evidence -->` in the task comments.
-
-   ```
-   mcp__zoho-projects__list_task_comments(project_id: "...", task_id: "...")
-   ```
-
-   Search each comment's `comment` field for the string `<!-- screenshots-evidence -->`.
-
-   - **If found**: Note the comment ID. You will UPDATE this comment instead of creating a new one.
-   - **If not found**: You will create a new comment.
-
-   **Important**: When an existing screenshot comment is found, inform the user:
-   > "I found an existing screenshot evidence comment (ID: XXX). I'll propose updating it with the new screenshots rather than creating a duplicate."
-
-6. **Construct the Zoho screenshot comment**: Create an HTML comment following CLAUDE.md guidelines:
+7. **Construct the Zoho screenshot comment**: Create an HTML comment following CLAUDE.md guidelines:
    - **No redundant titles**: Do NOT start with "[SCREENSHOTS]", "Feature verification", or similar meta-titles. Jump straight into the content.
    - Client-friendly language (no technical jargon)
    - Use HTML formatting (`<ul>`, `<li>`, `<b>` tags)
@@ -393,7 +428,7 @@ Check the task's `status.name` field and route accordingly:
 
    **Note:** Replace `{PRODUCTION_URL}` with the production URL from the project's CLAUDE.md.
 
-7. **Preview and post/update the screenshot comment**:
+8. **Preview and post/update the screenshot comment**:
 
    **First, show the user a FORMATTED preview using markdown (not raw HTML) so they can easily read and review the wording.** Wrap in horizontal rules (`---`) to visually separate it.
 
@@ -493,10 +528,14 @@ Before completing the PR workflow:
 
 ### For "Open"/"In Review" Tasks (Documentation)
 
-Before posting the Zoho screenshot comment, verify:
+Before doing any screenshot work:
 
-- [ ] **Check for existing**: Searched comments for `<!-- screenshots-evidence -->` marker
-- [ ] **Update vs Create**: If existing comment found, use `edit_task_comment`; otherwise use `add_task_comment`
+- [ ] **Check for existing FIRST**: Search comments for `<!-- screenshots-evidence -->` marker
+- [ ] **Ask user if existing found**: If comment exists, ask what to do (update screenshots, edit text, or skip)
+- [ ] **Wait for user response**: Do NOT proceed with screenshot capture until user confirms what they want
+
+If proceeding with screenshot work:
+
 - [ ] **Preview approved**: User has seen and approved the comment content
 - [ ] **Hidden marker included**: Comment ends with `<!-- screenshots-evidence -->` for future updates
 - [ ] **Language check**: No technical jargon - would a non-developer understand this?
@@ -505,7 +544,7 @@ Before posting the Zoho screenshot comment, verify:
 - [ ] **Links**: Production URLs included for relevant pages
 - [ ] **Verification steps**: Clear, actionable steps the client can follow
 - [ ] **Single line**: Entire comment on ONE line (no unintended line breaks)
-- [ ] **PR reference**: Included in internal section (if applicable)
+- [ ] **Update vs Create**: If existing comment found, use `edit_task_comment`; otherwise use `add_task_comment`
 
 ## Clarification Workflow
 
