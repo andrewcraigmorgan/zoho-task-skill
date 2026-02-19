@@ -585,8 +585,8 @@ The task is blocked pending client input. Generate clarification questions to ga
    Save the `third_party_file_id` and `x-cli-msg` from each response.
 
 7. **Construct the Zoho screenshot comment**: Create an HTML comment following CLAUDE.md guidelines:
-   - **No superfluous language**: Do NOT use filler phrases like "Implementation verified complete:", "This feature is now complete", "Here's what you can do:", "Feature verification:", etc. Start directly with the content.
-   - **No redundant titles**: Do NOT start with "[SCREENSHOTS]", "Status update:", or similar meta-titles.
+   - **No superfluous language**: Do NOT use filler phrases like "Implementation verified complete:", "This feature is now complete", "Here's what you can do:", "Feature verification:", "Investigation Complete:", etc. Start directly with the content.
+   - **No redundant titles**: Do NOT start with "[SCREENSHOTS]", "Status update:", "Investigation Complete", "Summary:", or similar meta-titles.
    - Client-friendly language (no technical jargon)
    - Use HTML formatting (`<ul>`, `<li>`, `<b>` tags)
    - Embed screenshots inline using the `/image/` endpoint:
@@ -644,10 +644,11 @@ Reference all relevant PRs in the Zoho comment's internal section.
 ## Zoho Comment Templates
 
 **IMPORTANT: Be concise.**
-- No meta-titles ("[SCREENSHOTS]", "Feature verification:", "Status update:")
+- No meta-titles ("[SCREENSHOTS]", "Feature verification:", "Status update:", "Investigation Complete:")
 - No redundant headers ("Screenshots:" before images - they're obviously screenshots)
 - No filler phrases ("This feature is now complete and ready for your review")
-- Jump straight to what matters: what changed, evidence, how to verify
+- No status-announcing openings ("Investigation Complete", "Update:", "Summary:")
+- Jump straight to what matters: findings, evidence, recommendations, or verification steps
 
 ### For Client Review (Primary Section)
 
